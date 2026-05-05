@@ -247,6 +247,25 @@ function TrickDisplay({ trick, mySeat }) {
   );
 }
 
+function PileStack({ pile }) {
+  const lastFour = (pile || []).slice(-4);
+  if (!lastFour.length) return null;
+  return (
+    <div style={{position:"absolute",top:12,left:12}}>
+      <div style={{position:"relative",width:60,height:82}}>
+        {lastFour.map((play, i) => (
+          <div key={i} style={{position:"absolute",left:i*6,top:i*4,transform:`rotate(${(i-1.5)*3}deg)`}}>
+            <CardView card={play.card} small />
+          </div>
+        ))}
+      </div>
+      <div style={{fontSize:"0.62rem",color:"var(--cream-d)",marginTop:4,letterSpacing:1}}>
+        Pile ({Math.floor((pile||[]).length/4)} trick{Math.floor((pile||[]).length/4)!==1?"s":""})
+      </div>
+    </div>
+  );
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [screen, setScreen] = useState("home"); // home, create, join, room, game
@@ -929,15 +948,6 @@ export default function App() {
                     <div style={{fontSize:"0.6rem",color:team==="02"?"#7ec8e3":"#f4a261"}}>
                       {team==="02"?"A":"B"}
                     </div>
-                    {/* Face-down cards for others */}
-                    {seat !== mySeat && (
-                      <div style={{display:"flex",gap:2}}>
-                        {(hands[seat]||[]).slice(0,Math.min(5,(hands[seat]||[]).length)).map((_,i)=>(
-                          <div key={i} className="card card-sm back"/>
-                        ))}
-                        {(hands[seat]||[]).length > 5 && <div style={{fontSize:"0.6rem",color:"var(--cream-d)",alignSelf:"center"}}>+{(hands[seat]||[]).length-5}</div>}
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -945,10 +955,8 @@ export default function App() {
               {/* Center trick */}
               <TrickDisplay trick={trick} mySeat={mySeat}/>
 
-              {/* Pile count */}
-              {pile.length > 0 && (
-                <div className="pile-badge">Pile: {Math.floor(pile.length/4)} trick{Math.floor(pile.length/4)!==1?"s":""}</div>
-              )}
+              {/* Pile stack (show last trick played) */}
+              <PileStack pile={pile} />
             </div>
 
             {/* Phase-specific UI */}
