@@ -252,8 +252,13 @@ export default function App() {
   const [screen, setScreen] = useState("home"); // home, create, join, room, game
   const [playerName, setPlayerName] = useState(() => localStorage.getItem("surry_name")||"");
   const [playerId] = useState(() => {
-    let id = localStorage.getItem("surry_pid");
-    if (!id) { id = genPlayerId(); localStorage.setItem("surry_pid", id); }
+    // Per-tab identity so multiple players can be tested in one browser.
+    // (localStorage is shared across tabs and would make every tab the same player.)
+    let id = sessionStorage.getItem("surry_pid");
+    if (!id) {
+      id = genPlayerId();
+      sessionStorage.setItem("surry_pid", id);
+    }
     return id;
   });
   const [roomId, setRoomId] = useState("");
@@ -278,7 +283,12 @@ export default function App() {
         () => loadRoomPlayers(rid))
       .on("postgres_changes",{event:"*",schema:"public",table:"game_state",filter:`room_id=eq.${rid}`},
         (payload) => { 
-          const newGs = payload.new;
+          const newGs = payload?.new;
+          if (!newGs || !newGs.phase) {
+            // Some realtime events may not include full row; refetch to keep clients consistent
+            loadGs(rid);
+            return;
+          }
           setGs(prev => {
             // detect SOLD
             if (prev && newGs.sold_count) {
@@ -302,7 +312,11 @@ export default function App() {
   };
 
   const loadGs = async (rid) => {
-    const { data } = await supabase.from("game_state").select("*").eq("room_id", rid).single();
+    const { data, error: e } = await supabase.from("game_state").select("*").eq("room_id", rid).single();
+    if (e) {
+      setError("Failed to load game state: " + e.message);
+      return;
+    }
     if (data) setGs(data);
   };
 
@@ -338,12 +352,24 @@ export default function App() {
     try {
       const { data: room, error: roomErr } = await supabase.from("rooms").select("*").eq("id", rid).single();
       if (roomErr || !room) { setError("Room not found"); setLoading(false); return; }
-      const { data: existing, error: existErr } = await supabase.from("room_players").select("seat").eq("room_id", rid);
+      const { data: existing, error: existErr } = await supabase
+        .from("room_players")
+        .select("*")
+        .eq("room_id", rid);
       if (existErr) { setError("Error loading room: " + existErr.message); setLoading(false); return; }
       const taken = (existing||[]).map(p=>p.seat);
       // Check if already in room
       const me = (existing||[]).find(p=>p.player_id===playerId);
-      if (me) { setRoomId(rid); setMySeat(me.seat); await loadRoomPlayers(rid); await loadGs(rid); subscribeRoom(rid); setScreen("room"); setLoading(false); return; }
+      if (me) {
+        setRoomId(rid);
+        setMySeat(me.seat);
+        await loadRoomPlayers(rid);
+        await loadGs(rid);
+        subscribeRoom(rid);
+        setScreen("room");
+        setLoading(false);
+        return;
+      }
       const free = [0,1,2,3].find(s=>!taken.includes(s));
       if (free===undefined) { setError("Room is full"); setLoading(false); return; }
       const { error: insertErr } = await supabase.from("room_players").insert({ room_id: rid, player_id: playerId, player_name: playerName.trim(), seat: free });
@@ -376,7 +402,7 @@ export default function App() {
     const { hands, remaining } = dealCards();
     const dealerSeat = gs?.dealer_seat || 0;
     const firstBidder = (dealerSeat + 1) % 4;
-    await supabase.from("game_state").update({
+    const { error: upErr } = await supabase.from("game_state").update({
       phase: "bidding",
       dealer_seat: dealerSeat,
       current_turn_seat: firstBidder,
@@ -396,7 +422,27 @@ export default function App() {
       log: ["Game started! Bidding begins."],
       updated_at: new Date().toISOString()
     }).eq("room_id", roomId);
+    if (upErr) {
+      setError("Failed to start game: " + upErr.message);
+      return;
+    }
     await supabase.from("rooms").update({ status: "playing" }).eq("id", roomId);
+    // Re-fetch from DB to confirm hands were persisted
+    const { data: checkGs, error: checkErr } = await supabase
+      .from("game_state")
+      .select("phase,hands,updated_at")
+      .eq("room_id", roomId)
+      .single();
+    if (checkErr) {
+      setError("Started game but failed to recheck state: " + checkErr.message);
+    } else {
+      const h = typeof checkGs?.hands === "string" ? JSON.parse(checkGs.hands) : (checkGs?.hands || {});
+      const sizes = ["0","1","2","3"].map(k => (h?.[k] || h?.[Number(k)] || []).length);
+      if (checkGs?.phase !== "bidding" || sizes.some(s => s !== 5)) {
+        setError(`Start wrote unexpected state. phase=${checkGs?.phase} sizes=${sizes.join(",")}`);
+      }
+    }
+    await loadGs(roomId);
     setScreen("game");
   };
 
@@ -659,6 +705,10 @@ export default function App() {
       loadRoomPlayers(savedRoom);
       loadGs(savedRoom);
       subscribeRoom(savedRoom);
+      // Set screen based on game state
+      setTimeout(() => {
+        setScreen("room"); // Will auto-switch to game if gs.phase is set
+      }, 100);
     }
   }, []);
 
@@ -669,16 +719,39 @@ export default function App() {
     }
   }, [roomId, mySeat]);
 
+  // Ensure mySeat is set (derive from room_players if missing)
+  useEffect(() => {
+    if (!roomId) return;
+    if (mySeat !== null) return;
+    if (!roomPlayers || roomPlayers.length === 0) return;
+    const me = roomPlayers.find(p => p.player_id === playerId);
+    if (me && typeof me.seat === "number") {
+      setMySeat(me.seat);
+    }
+  }, [roomId, mySeat, roomPlayers, playerId]);
+
+  // Fallback sync (if Supabase Realtime isn't enabled)
+  useEffect(() => {
+    if (!roomId) return;
+    if (screen !== "room" && screen !== "game") return;
+    const t = setInterval(() => {
+      loadRoomPlayers(roomId);
+      loadGs(roomId);
+    }, 1500);
+    return () => clearInterval(t);
+  }, [roomId, screen]);
+
   // Auto-switch to game screen if game active
   useEffect(() => {
     if (gs && gs.phase && gs.phase !== "waiting" && screen === "room") {
       setScreen("game");
     }
-  }, [gs?.phase]);
+  }, [gs?.phase, screen]);
 
   // ── Derived state ──────────────────────────────────────────────────────────
   const hands = gs ? (typeof gs.hands==="string"?JSON.parse(gs.hands):(gs.hands||{})) : {};
-  const myHand = (hands[mySeat] || []).sort((a,b) => {
+  const myHandRaw = mySeat === null ? [] : (hands?.[mySeat] || hands?.[String(mySeat)] || []);
+  const myHand = (myHandRaw || []).sort((a,b) => {
     const as = cardSuit(a), bs2 = cardSuit(b);
     if (as !== bs2) return SUITS.indexOf(as) - SUITS.indexOf(bs2);
     return cardVal(b) - cardVal(a);
@@ -804,7 +877,7 @@ export default function App() {
                 Players: {roomPlayers.length}/4
                 {roomPlayers.length < 4 && <span className="waiting-pulse"> · Waiting for players...</span>}
               </div>
-              {roomPlayers.length === 4 && (
+              {roomPlayers.length === 4 && [0,1,2,3].every(s => roomPlayers.some(p=>p.seat===s)) && (
                 <button className="btn btn-gold w-full" onClick={startGame}>Start Game</button>
               )}
               {error && <div style={{color:"#e74c3c",fontSize:"0.75rem",marginTop:"0.5rem"}}>{error}</div>}
@@ -884,6 +957,37 @@ export default function App() {
                 <div style={{fontSize:"0.7rem",color:"var(--cream-d)"}}>
                   {isMyTurn ? "★ YOUR TURN TO BID" : `Waiting for ${getPlayerAt(gs.current_turn_seat)?.player_name||"..."}...`}
                 </div>
+                <div style={{fontSize:"0.65rem",color:"var(--cream-d)",marginTop:6}}>
+                  Seat: <span style={{color:"var(--cream)"}}>{mySeat===null?"?":(mySeat+1)}</span>{" "}
+                  · Hand cards: <span style={{color:"var(--cream)"}}>{(hands?.[mySeat]||[]).length}</span>
+                </div>
+                <div style={{fontSize:"0.62rem",color:"var(--cream-d)",marginTop:6,opacity:0.9,lineHeight:1.6}}>
+                  gs.phase: <span style={{color:"var(--cream)"}}>{String(gs?.phase||"")}</span>{" "}
+                  · hands keys: <span style={{color:"var(--cream)"}}>{hands ? Object.keys(hands).join(",") : "none"}</span>
+                  <br/>
+                  hand sizes:{" "}
+                  <span style={{color:"var(--cream)"}}>
+                    {["0","1","2","3"].map(k => `${k}:${(hands?.[k]||[]).length}`).join("  ")}
+                  </span>
+                </div>
+                <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid var(--border)"}}>
+                  <div style={{fontSize:"0.65rem",color:"var(--cream-d)",marginBottom:6,letterSpacing:2,textAlign:"center"}}>
+                    Initial 5-card hand (use this to bid)
+                  </div>
+                  <div className="hand-wrap" style={{maxWidth:"100%",padding:0}}>
+                    {myHand.map(card => (
+                      <CardView key={card} card={card} playable={false} />
+                    ))}
+                  </div>
+                  {myHand.length === 0 && (
+                    <div style={{marginTop:8,fontSize:"0.7rem",color:"#e74c3c",textAlign:"center"}}>
+                      No cards loaded for your seat yet.
+                      <div style={{fontSize:"0.62rem",color:"var(--cream-d)",marginTop:4}}>
+                        Tip: If testing with multiple players, use separate tabs (now supported) and ensure Start Game shows no DB error.
+                      </div>
+                    </div>
+                  )}
+                </div>
                 {Object.entries(bids).map(([s,b]) => (
                   <div key={s} style={{fontSize:"0.7rem",color:"var(--cream-d)",marginTop:2}}>
                     {getPlayerAt(parseInt(s))?.player_name}: {b==="pass"?"Pass":b}
@@ -937,9 +1041,10 @@ export default function App() {
                       <CardView
                         key={card}
                         card={card}
-                        playable={isPlayable}
+                        playable={gs.phase === "playing" ? isPlayable : false}
                         selected={selectedCard === card}
                         onClick={() => {
+                          if (gs.phase !== "playing") return;
                           if (selectedCard === card) { playCard(card); setSelectedCard(null); }
                           else setSelectedCard(card);
                         }}
