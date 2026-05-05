@@ -129,6 +129,12 @@ const CSS = `
   /* Game table */
   .game-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:1rem;}
   .table-area{position:relative;width:100%;max-width:700px;aspect-ratio:1.4;background:radial-gradient(ellipse at center,#1e4d2b 0%,#0d2415 100%);border-radius:50%;border:3px solid rgba(201,168,76,0.3);box-shadow:inset 0 0 60px rgba(0,0,0,0.5),0 0 40px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;}
+  .table-center-layer{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;}
+  .pile-stack{pointer-events:none;opacity:0.95;filter:drop-shadow(0 10px 24px rgba(0,0,0,0.45));}
+  .pile-stack-cards{position:relative;width:88px;height:118px;}
+  .pile-stack-meta{margin-top:6px;text-align:center;font-size:0.62rem;color:var(--cream-d);letter-spacing:1;}
+  .pile-under-trick{z-index:1;}
+  .trick-over-pile{z-index:2;}
   /* Player positions on table */
   .player-pos{position:absolute;display:flex;flex-direction:column;align-items:center;gap:4px;}
   .player-pos.top{top:5%;left:50%;transform:translateX(-50%);}
@@ -140,6 +146,9 @@ const CSS = `
   .player-name-badge.active{border-color:var(--green-ll);color:#90ee90;}
   /* Trick area */
   .trick-center{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:6px;width:180px;height:120px;}
+  .trick-slot{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:70px;}
+  .trick-slot.left,.trick-slot.right{min-width:86px;}
+  .trick-label{font-size:0.58rem;color:var(--cream-d);letter-spacing:0.5px;max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.08);padding:1px 6px;border-radius:999px;}
   /* Cards */
   .card{width:44px;height:62px;background:white;border-radius:5px;border:1px solid #ccc;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:0.9rem;font-weight:700;cursor:default;position:relative;flex-shrink:0;transition:transform 0.15s,box-shadow 0.15s;}
   .card.red{color:var(--suit-red);}
@@ -227,22 +236,31 @@ function CardView({ card, small, playable, selected, onClick, faceDown }) {
 }
 
 // ── Trick display ──────────────────────────────────────────────────────────────
-function TrickDisplay({ trick, mySeat }) {
+function TrickDisplay({ trick, mySeat, roomPlayers }) {
   // positions: bottom=me, top=opposite, left=right-1, right=left+1
   const pos = ["bottom","left","top","right"];
   // trick is [{seat, card}, ...]
   const byPos = {};
+  const nameByPos = {};
   if (trick) {
     for (const play of trick) {
       const relSeat = ((play.seat - mySeat) + 4) % 4;
       byPos[pos[relSeat]] = play.card;
+      nameByPos[pos[relSeat]] =
+        roomPlayers?.find(p => p.seat === play.seat)?.player_name || `Seat ${play.seat+1}`;
     }
   }
+  const Slot = ({ where, card }) => (
+    <div className={`trick-slot ${where}`}>
+      {card ? <div className="trick-label">{nameByPos[where] || ""}</div> : <div style={{height:18}} />}
+      <CardView card={card} small />
+    </div>
+  );
   return (
     <div style={{display:"grid",gridTemplateColumns:"1fr 60px 1fr",gridTemplateRows:"1fr 60px 1fr",width:180,height:140,alignItems:"center",justifyItems:"center"}}>
-      <div/><CardView card={byPos.top} small/><div/>
-      <CardView card={byPos.left} small/><div style={{width:20,height:20,borderRadius:"50%",background:"rgba(255,255,255,0.1)"}}/><CardView card={byPos.right} small/>
-      <div/><CardView card={byPos.bottom} small/><div/>
+      <div/><Slot where="top" card={byPos.top}/><div/>
+      <Slot where="left" card={byPos.left}/><div style={{width:20,height:20,borderRadius:"50%",background:"rgba(255,255,255,0.1)"}}/><Slot where="right" card={byPos.right}/>
+      <div/><Slot where="bottom" card={byPos.bottom}/><div/>
     </div>
   );
 }
@@ -251,15 +269,15 @@ function PileStack({ pile }) {
   const lastFour = (pile || []).slice(-4);
   if (!lastFour.length) return null;
   return (
-    <div style={{position:"absolute",top:12,left:12}}>
-      <div style={{position:"relative",width:60,height:82}}>
+    <div className="pile-stack">
+      <div className="pile-stack-cards">
         {lastFour.map((play, i) => (
-          <div key={i} style={{position:"absolute",left:i*6,top:i*4,transform:`rotate(${(i-1.5)*3}deg)`}}>
+          <div key={i} style={{position:"absolute",left:i*10,top:i*7,transform:`rotate(${(i-1.5)*5}deg)`}}>
             <CardView card={play.card} small />
           </div>
         ))}
       </div>
-      <div style={{fontSize:"0.62rem",color:"var(--cream-d)",marginTop:4,letterSpacing:1}}>
+      <div className="pile-stack-meta">
         Pile ({Math.floor((pile||[]).length/4)} trick{Math.floor((pile||[]).length/4)!==1?"s":""})
       </div>
     </div>
@@ -952,11 +970,13 @@ export default function App() {
                 );
               })}
 
-              {/* Center trick */}
-              <TrickDisplay trick={trick} mySeat={mySeat}/>
-
-              {/* Pile stack (show last trick played) */}
-              <PileStack pile={pile} />
+              {/* Center pile + current trick */}
+              <div className="table-center-layer pile-under-trick">
+                <PileStack pile={pile} />
+              </div>
+              <div className="table-center-layer trick-over-pile">
+                <TrickDisplay trick={trick} mySeat={mySeat} roomPlayers={roomPlayers}/>
+              </div>
             </div>
 
             {/* Phase-specific UI */}
