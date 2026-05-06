@@ -17,12 +17,7 @@ export default function GameScreen({
   useEffect(() => {
     const myPlayer = roomPlayers?.find(p => p.seat === mySeat);
     if (gs?.id && myPlayer?.user_id) {
-      webrtc.joinVoice(gs.id, myPlayer.user_id).then(() => {
-        webrtc.toggleMic(true);
-        webrtc.toggleSpeaker(true);
-        setIsMicMuted(true);
-        setIsSpeakerMuted(true);
-      }).catch(err => console.error("Voice chat init failed", err));
+      webrtc.joinVoice(gs.id, myPlayer.user_id).catch(err => console.error("Voice chat init failed", err));
     }
     return () => {
       webrtc.leaveVoice();
