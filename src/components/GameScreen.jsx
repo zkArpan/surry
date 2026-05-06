@@ -384,7 +384,7 @@ export default function GameScreen({
 
       {/* ── MY HAND ── */}
       <div className="absolute" style={{
-        bottom: 18, left: "50%", transform: "translateX(-50%)", zIndex: 30,
+        bottom: -8, left: "50%", transform: "translateX(-50%)", zIndex: 30,
       }}>
         <MyHand />
       </div>
