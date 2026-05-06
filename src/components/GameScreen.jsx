@@ -92,68 +92,119 @@ export default function GameScreen({
     );
   };
 
-  // ── player name + score pill ─────────────────────────────────────────────
-  const PlayerPill = ({ p, seat }) => {
+  // ── player name + score pill (REMOVED - no longer used) ─────────────────
+
+  // ── avatar circle only (no name) ────────────────────────────────────────
+  const AvatarOnly = ({ p, seat, size = 56 }) => {
     if (!p) return null;
     const active = isActive(seat);
+    const tricks = trickCount(seat);
     return (
-      <div style={{
-        display: "inline-flex", alignItems: "center", gap: 4,
-        padding: "3px 10px", borderRadius: 999,
-        background: active ? "rgba(201,168,76,0.22)" : "rgba(15,10,4,0.78)",
-        border: active ? "1.5px solid rgba(201,168,76,0.65)" : "1px solid rgba(255,255,255,0.12)",
-        boxShadow: active ? "0 0 8px rgba(201,168,76,0.45)" : "none",
-        color: "#f0e6cc", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap",
-        fontFamily: "sans-serif",
-      }}>
-        {p.player_name}
-        <span style={{ color: "#4ade80", fontWeight: 700, marginLeft: 2 }}>{trickCount(seat)}</span>
-        <span style={{ color: "rgba(255,255,255,0.35)" }}>/{winBid}</span>
+      <div className="relative" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{
+          width: size, height: size, borderRadius: "50%",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: size * 0.42, fontFamily: "serif", fontWeight: 700,
+          color: "#f0e6cc",
+          background: active
+            ? "linear-gradient(135deg,#c9a84c,#8B6914)"
+            : "linear-gradient(135deg,#2a1e0e,#191008)",
+          border: active ? `${size * 0.08}px solid #c9a84c` : `${size * 0.08}px solid rgba(255,255,255,0.18)`,
+          boxShadow: active ? "0 0 14px rgba(201,168,76,0.65)" : "0 2px 8px rgba(0,0,0,0.6)",
+          flexShrink: 0,
+        }}>
+          {p.player_name.charAt(0).toUpperCase()}
+        </div>
+        {/* Trick count badge */}
+        <div style={{
+          position: "absolute",
+          background: "rgba(74, 222, 128, 0.9)",
+          color: "#111",
+          borderRadius: "50%",
+          width: 24,
+          height: 24,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 12,
+          fontWeight: 700,
+          border: "2px solid #fff",
+          bottom: -8,
+          right: -8,
+          fontFamily: "sans-serif",
+        }}>
+          {tricks}
+        </div>
       </div>
     );
   };
 
-  // ── avatar circle ────────────────────────────────────────────────────────
-  const Avatar = ({ p, seat, size = 44 }) => {
-    if (!p) return null;
-    const active = isActive(seat);
+  // ── pile cards display ──────────────────────────────────────────────────
+  const PileDisplay = () => {
+    if (!pile || pile.length === 0) return null;
+    const lastTricks = (pile || []).slice(-4);
     return (
-      <div style={{
-        width: size, height: size, borderRadius: "50%",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: size * 0.42, fontFamily: "serif", fontWeight: 700,
-        color: "#f0e6cc",
-        background: active
-          ? "linear-gradient(135deg,#c9a84c,#8B6914)"
-          : "linear-gradient(135deg,#2a1e0e,#191008)",
-        border: active ? `${size * 0.05}px solid #c9a84c` : `${size * 0.05}px solid rgba(255,255,255,0.18)`,
-        boxShadow: active ? "0 0 14px rgba(201,168,76,0.65)" : "0 2px 8px rgba(0,0,0,0.6)",
-        flexShrink: 0,
-      }}>
-        {p.player_name.charAt(0).toUpperCase()}
+      <div className="relative" style={{ width: 220, height: 220 }}>
+        {lastTricks.map((play, idx) => {
+          const xOff = (idx - 1.5) * 18;
+          const yOff = idx % 2 === 0 ? -2 : 2;
+          const rot = (idx - 1.5) * 6;
+          const rank = play.card.slice(0, -1);
+          const suit = play.card.slice(-1);
+          const red = ["♥", "♦"].includes(suit);
+          return (
+            <div key={`pile-${play.seat}-${play.card}-${idx}`} className="absolute" style={{
+              left: "50%", top: "50%",
+              transform: `translate(calc(-50% + ${xOff}px), calc(-50% + ${yOff}px)) rotate(${rot}deg)`,
+              zIndex: idx,
+              filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.4))",
+            }}>
+              <div style={{
+                width: 40, height: 56, background: "#fff",
+                borderRadius: 4, border: "1.5px solid #ccc",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                display: "flex", flexDirection: "column",
+                alignItems: "center", justifyContent: "center",
+                position: "relative", fontFamily: "serif",
+              }}>
+                <span style={{
+                  position: "absolute", top: 2, left: 3, fontSize: 11,
+                  fontWeight: 700, color: red ? "#e74c3c" : "#333", lineHeight: 1,
+                }}>{rank}</span>
+                <span style={{ fontSize: 18, color: red ? "#e74c3c" : "#333" }}>{suit}</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     );
   };
 
-  // ── center trick cards ───────────────────────────────────────────────────
+  // ── center trick cards in + pattern by player position ──────────────────
   const CenterTrick = () => {
     if (!trick || trick.length === 0) return null;
+    
+    // Map each seat to its position in the + pattern
+    const getPositionBySeat = (seat) => {
+      if (seat === topSeat) return { x: 0, y: -85, rot: 0 };      // top
+      if (seat === leftSeat) return { x: -85, y: 0, rot: 0 };     // left
+      if (seat === rightSeat) return { x: 85, y: 0, rot: 0 };     // right
+      if (seat === mySeat) return { x: 0, y: 85, rot: 0 };        // bottom
+      return { x: 0, y: 0, rot: 0 };
+    };
+    
     return (
-      <div className="relative" style={{ width: 150, height: 100 }}>
+      <div className="relative" style={{ width: 220, height: 220 }}>
         {trick.map((play, idx) => {
-          const mid = (trick.length - 1) / 2;
-          const t = trick.length > 1 ? (idx - mid) / (mid || 1) : 0;
-          const xOff = t * 24;
-          const yOff = Math.abs(t) * 5;
-          const rot = t * 9;
+          const pos = getPositionBySeat(play.seat);
           const rank = play.card.slice(0, -1);
           const suit = play.card.slice(-1);
           const red = ["♥", "♦"].includes(suit);
           return (
             <div key={`${play.seat}-${play.card}`} className="absolute" style={{
               left: "50%", top: "50%",
-              transform: `translate(calc(-50% + ${xOff}px), calc(-50% + ${yOff}px)) rotate(${rot}deg)`,
-              zIndex: idx + 1,
+              transform: `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px)) rotate(${pos.rot}deg)`,
+              zIndex: idx + 10,
               filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.55))",
             }}>
               <div style={{
@@ -177,52 +228,6 @@ export default function GameScreen({
     );
   };
 
-  // ── recent pile ──────────────────────────────────────────────────────────
-  const RecentPile = () => {
-    const lastTrick = (pile || []).slice(-4);
-    if (!lastTrick.length) return null;
-    return (
-      <div className="flex flex-col items-center gap-1 mt-4 opacity-75 hover:opacity-100 transition-opacity">
-        <div style={{ fontSize: 10, color: "rgba(201,168,76,0.8)", fontWeight: 700, letterSpacing: 1 }}>
-          PILE ({pileCount})
-        </div>
-        <div className="relative" style={{ width: 100, height: 60 }}>
-          {lastTrick.map((play, idx) => {
-            const xOff = idx * 12 - 18;
-            const yOff = 0;
-            const rot = (idx - 1.5) * 8;
-            const rank = play.card.slice(0, -1);
-            const suit = play.card.slice(-1);
-            const red = ["♥", "♦"].includes(suit);
-            return (
-              <div key={`pile-${play.seat}-${play.card}-${idx}`} className="absolute" style={{
-                left: "50%", top: "50%",
-                transform: `translate(calc(-50% + ${xOff}px), calc(-50% + ${yOff}px)) rotate(${rot}deg)`,
-                zIndex: idx,
-              }}>
-                <div style={{
-                  width: 38, height: 54, background: "#e8e8e8",
-                  borderRadius: 4, border: "1px solid #999",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.5)",
-                  display: "flex", flexDirection: "column",
-                  alignItems: "center", justifyContent: "center",
-                  position: "relative", fontFamily: "serif",
-                }}>
-                  <span style={{
-                    position: "absolute", top: 2, left: 3, fontSize: 10,
-                    fontWeight: 700, color: red ? "#c0392b" : "#333", lineHeight: 1,
-                  }}>{rank}</span>
-                  <span style={{ fontSize: 16, color: red ? "#c0392b" : "#333" }}>{suit}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-  // ── my hand ──────────────────────────────────────────────────────────────
   const MyHand = () => {
     const count = myHand.length;
     if (!count) return null;
@@ -301,113 +306,128 @@ export default function GameScreen({
         backgroundImage: `repeating-linear-gradient(91deg,transparent,transparent 38px,rgba(0,0,0,0.035) 38px,rgba(0,0,0,0.035) 39px)`,
       }} />
 
-      {/* ── TOP BAR ── */}
-      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-3 z-40">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowStats(true)}
-            style={{
-              width: 38, height: 38, borderRadius: "50%", fontSize: 18,
-              background: "rgba(15,8,2,0.72)", border: "1px solid rgba(255,255,255,0.14)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer",
-            }}
-          >📊</button>
-          <div style={{
-            padding: "6px 14px", borderRadius: 999,
-            background: "rgba(15,8,2,0.80)", border: "1px solid rgba(255,255,255,0.14)",
-            color: "#f0e6cc", fontSize: 13, fontFamily: "sans-serif", fontWeight: 600
-          }}>
-            Round {gs.round_number || 1}
-          </div>
+      {/* ── TOP LEFT: CLOSE BUTTON WITH TRUMP, BID & ROUND ── */}
+      <div className="absolute top-4 left-4 z-50 flex items-center gap-3">
+        <button
+          onClick={() => setShowExitConfirm(true)}
+          style={{
+            width: 50, height: 50, borderRadius: 8, fontSize: 28,
+            background: "#c0392b",
+            border: "3px solid #8b2c23",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer",
+            boxShadow: "0 4px 12px rgba(192, 57, 43, 0.6)",
+            fontWeight: 700,
+            color: "#fff",
+            flexShrink: 0,
+          }}
+        >✕</button>
+
+        {/* Round number */}
+        <div style={{
+          padding: "8px 14px", borderRadius: 8,
+          background: "rgba(15,8,2,0.85)", border: "1px solid rgba(255,255,255,0.14)",
+          color: "#f0e6cc", fontSize: 12, fontFamily: "sans-serif", fontWeight: 600
+        }}>
+          Round {gs.round_number || 1}
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={toggleMic}
-            style={{
-              width: 38, height: 38, borderRadius: "50%", fontSize: 18,
-              background: isMicMuted ? "rgba(150,30,30,0.8)" : "rgba(15,8,2,0.72)",
-              border: "1px solid rgba(255,255,255,0.14)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer",
-            }}
-          >{isMicMuted ? "🔇" : "🎤"}</button>
-          <button
-            onClick={toggleSpeaker}
-            style={{
-              width: 38, height: 38, borderRadius: "50%", fontSize: 18,
-              background: isSpeakerMuted ? "rgba(150,30,30,0.8)" : "rgba(15,8,2,0.72)",
-              border: "1px solid rgba(255,255,255,0.14)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer",
-            }}
-          >{isSpeakerMuted ? "🔈" : "🔊"}</button>
-          <button
-            onClick={() => setShowExitConfirm(true)}
-            style={{
-              width: 38, height: 38, borderRadius: "50%", fontSize: 18,
-              background: "rgba(15,8,2,0.72)", border: "1px solid rgba(255,255,255,0.14)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer",
-            }}
-          >🚪</button>
+        {/* Bid */}
+        <div style={{
+          padding: "8px 14px", borderRadius: 8,
+          background: "rgba(15,8,2,0.85)", border: "1px solid rgba(255,255,255,0.14)",
+          color: "#f0e6cc", fontSize: 12, fontFamily: "sans-serif", fontWeight: 600
+        }}>
+          Bid <span style={{ color: "#c9a84c", fontWeight: 700 }}>{gs.winning_bid || "?"}</span>
+          {" "}by <span style={{ color: "rgba(201,168,76,0.8)" }}>{getPlayerAt(gs.bid_winner_seat)?.player_name || "—"}</span>
+        </div>
+
+        {/* Trump */}
+        <div style={{
+          padding: "8px 14px", borderRadius: 8,
+          background: "rgba(15,8,2,0.85)", border: "1px solid rgba(255,255,255,0.14)",
+          color: "#f0e6cc", fontSize: 12, fontFamily: "sans-serif", fontWeight: 600
+        }}>
+          Trump <span style={{ color: trumpColor, fontWeight: 700 }}>
+            {trumpSymbol} {gs.trump_suit ? gs.trump_suit.charAt(0).toUpperCase() + gs.trump_suit.slice(1) : "—"}
+          </span>
         </div>
       </div>
 
-      {/* ── TOP OPPONENT ── */}
-      <div className="absolute flex flex-col items-center gap-1.5" style={{
-        top: -10, left: "50%", transform: "translateX(-50%)", zIndex: 30,
-      }}>
-        <div className="relative" style={{ width: 120, height: 106 }}>
-          <OpponentFan count={getHandSize(topSeat)} position="top" active={isActive(topSeat)} />
-          <div className="absolute" style={{ left: "50%", top: "50%", transform: "translate(-50%,-50%)", zIndex: 20 }}>
-            <Avatar p={topP} seat={topSeat} size={46} />
-          </div>
+      {/* ── TOP CENTER: TOP OPPONENT AVATAR & NAME ── */}
+      <div className="absolute top-6 left-1/2 z-50" style={{ transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+        <AvatarOnly p={topP} seat={topSeat} size={48} />
+        <div style={{ fontSize: 10, color: "#f0e6cc", fontFamily: "sans-serif", fontWeight: 600, whiteSpace: "nowrap" }}>
+          {topP?.player_name || "—"}
         </div>
+      </div>
+
+      {/* ── TOP RIGHT: AUDIO CONTROLS ── */}
+      <div className="absolute top-4 right-4 z-50 flex gap-2">
+        <button
+          onClick={toggleMic}
+          style={{
+            width: 40, height: 40, borderRadius: 8, fontSize: 16,
+            background: isMicMuted ? "rgba(150,30,30,0.8)" : "rgba(15,8,2,0.72)",
+            border: "1px solid rgba(255,255,255,0.14)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer",
+          }}
+        >{isMicMuted ? "🔇" : "🎤"}</button>
+        <button
+          onClick={toggleSpeaker}
+          style={{
+            width: 40, height: 40, borderRadius: 8, fontSize: 16,
+            background: isSpeakerMuted ? "rgba(150,30,30,0.8)" : "rgba(15,8,2,0.72)",
+            border: "1px solid rgba(255,255,255,0.14)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer",
+          }}
+        >{isSpeakerMuted ? "🔈" : "🔊"}</button>
+        <button
+          onClick={() => setShowStats(true)}
+          style={{
+            width: 40, height: 40, borderRadius: 8, fontSize: 16,
+            background: "rgba(15,8,2,0.72)", border: "1px solid rgba(255,255,255,0.14)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer",
+          }}
+        >📊</button>
       </div>
 
       {/* ── LEFT OPPONENT ── */}
-      <div className="absolute flex flex-col items-center gap-2" style={{
-        top: "50%", left: 10, transform: "translateY(-50%)",
+      <div className="absolute" style={{
+        top: "50%", left: 12, transform: "translateY(-50%)", zIndex: 30, display: "flex", alignItems: "center", gap: 6,
       }}>
-        <div className="relative" style={{ width: 120, height: 120 }}>
-          <OpponentFan count={getHandSize(leftSeat)} position="left" active={isActive(leftSeat)} />
-          <div className="absolute" style={{ left: "50%", top: "50%", transform: "translate(-50%,-50%)", zIndex: 20 }}>
-            <Avatar p={leftP} seat={leftSeat} size={46} />
-          </div>
+        <div style={{ fontSize: 10, color: "#f0e6cc", fontFamily: "sans-serif", fontWeight: 600, whiteSpace: "nowrap" }}>
+          {leftP?.player_name || "—"}
         </div>
+        <AvatarOnly p={leftP} seat={leftSeat} size={56} />
       </div>
 
       {/* ── RIGHT OPPONENT ── */}
-      <div className="absolute flex flex-col items-center gap-2" style={{
-        top: "50%", right: 10, transform: "translateY(-50%)",
+      <div className="absolute" style={{
+        top: "50%", right: 12, transform: "translateY(-50%)", zIndex: 30, display: "flex", alignItems: "center", gap: 6,
       }}>
-        <div className="relative" style={{ width: 120, height: 120 }}>
-          <OpponentFan count={getHandSize(rightSeat)} position="right" active={isActive(rightSeat)} />
-          <div className="absolute" style={{ left: "50%", top: "50%", transform: "translate(-50%,-50%)", zIndex: 20 }}>
-            <Avatar p={rightP} seat={rightSeat} size={46} />
-          </div>
+        <AvatarOnly p={rightP} seat={rightSeat} size={56} />
+        <div style={{ fontSize: 10, color: "#f0e6cc", fontFamily: "sans-serif", fontWeight: 600, whiteSpace: "nowrap" }}>
+          {rightP?.player_name || "—"}
         </div>
       </div>
 
-      {/* ── CENTER: trick + pile + streak ── */}
-      <div className="absolute flex flex-col items-center gap-2" style={{
-        top: "50%", left: "50%", transform: "translate(-50%, -55%)",
+      {/* ── CENTER: trick + pile in + pattern ── */}
+      <div className="absolute" style={{
+        top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 20,
       }}>
-        <CenterTrick />
-        <RecentPile />
-        {gs.consecutive_wins > 0 && gs.pile_owner_seat !== null && (
-          <div style={{
-            padding: "2px 10px", borderRadius: 999,
-            background: "rgba(201,168,76,0.12)",
-            border: "1px solid rgba(201,168,76,0.38)",
-            color: "#c9a84c", fontSize: 11, fontFamily: "sans-serif",
-          }}>
-            🔥 {getPlayerAt(gs.pile_owner_seat)?.player_name}{" "}
-            <span style={{ color: "rgba(255,255,255,0.4)" }}>{gs.consecutive_wins}/2</span>
-          </div>
-        )}
+        {/* Pile cards (lower z-index, rendered behind) */}
+        <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", zIndex: 5 }}>
+          <PileDisplay />
+        </div>
+        
+        {/* Played cards (higher z-index, rendered on top) */}
+        <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", zIndex: 15 }}>
+          <CenterTrick />
+        </div>
       </div>
 
       {/* ── YOUR TURN indicator ── */}
@@ -424,36 +444,14 @@ export default function GameScreen({
 
       {/* ── MY HAND ── */}
       <div className="absolute" style={{
-        bottom: -8, left: "50%", transform: "translateX(-50%)", zIndex: 30,
+        bottom: 16, left: "50%", transform: "translateX(-50%)", zIndex: 30,
       }}>
         <MyHand />
       </div>
 
-      {/* ── BOTTOM CORNERS: TRUMP & BID ── */}
-      <div className="absolute bottom-4 left-4 z-40" style={{
-        padding: "6px 14px", borderRadius: 999,
-        background: "rgba(15,8,2,0.80)", border: "1px solid rgba(255,255,255,0.14)",
-        color: "#f0e6cc", fontSize: 12, fontFamily: "sans-serif",
-      }}>
-        Trump{" "}
-        <span style={{ color: trumpColor, fontWeight: 700 }}>
-          {trumpSymbol} {gs.trump_suit ? gs.trump_suit.charAt(0).toUpperCase() + gs.trump_suit.slice(1) : "—"}
-        </span>
-      </div>
-
-      <div className="absolute bottom-4 right-4 z-40" style={{
-        padding: "6px 14px", borderRadius: 999,
-        background: "rgba(15,8,2,0.80)", border: "1px solid rgba(255,255,255,0.14)",
-        color: "#f0e6cc", fontSize: 12, fontFamily: "sans-serif",
-      }}>
-        Bid{" "}
-        <span style={{ color: "#c9a84c", fontWeight: 700 }}>{gs.winning_bid || "?"}</span>
-        {" "}by {getPlayerAt(gs.bid_winner_seat)?.player_name || "?"}
-      </div>
-
       {/* ── PLAY BUTTON ── */}
       {gs.phase === "playing" && isMyTurn && selectedCard && (
-        <div className="absolute z-50" style={{ bottom: 50, right: 14 }}>
+        <div className="absolute z-50" style={{ bottom: 90, right: 14 }}>
           <button
             onClick={() => { playCard(selectedCard); setSelectedCard(null); }}
             style={{
@@ -475,20 +473,65 @@ export default function GameScreen({
         <div className="fixed inset-0 flex items-center justify-center z-[100]"
           style={{ background: "rgba(0,0,0,0.72)" }}>
           <div style={{
-            width: "min(300px, 88vw)", borderRadius: 20, padding: "24px 20px",
+            width: "min(500px, 92vw)", borderRadius: 16, padding: "20px",
             background: "rgba(22,13,5,0.98)", border: "1px solid rgba(201,168,76,0.42)",
             boxShadow: "0 24px 60px rgba(0,0,0,0.7)", fontFamily: "sans-serif",
           }}>
-            <div style={{ fontFamily: "serif", fontSize: 22, color: "#c9a84c", textAlign: "center", marginBottom: 4 }}>
+            {/* Current bid info */}
+            <div style={{
+              textAlign: "center", marginBottom: 14, paddingBottom: 12,
+              borderBottom: "1px solid rgba(201,168,76,0.25)",
+            }}>
+              <div style={{ fontSize: 13, color: "rgba(240,230,204,0.65)", marginBottom: 4 }}>
+                Current Bid
+              </div>
+              <div style={{ fontSize: 20, color: "#c9a84c", fontWeight: 700, marginBottom: 2 }}>
+                {gs.winning_bid || "—"}
+              </div>
+              <div style={{ fontSize: 11, color: "rgba(240,230,204,0.55)" }}>
+                by {getPlayerAt(gs.bid_winner_seat)?.player_name || "—"}
+              </div>
+            </div>
+
+            <div style={{ fontFamily: "serif", fontSize: 22, color: "#c9a84c", textAlign: "center", marginBottom: 2 }}>
               Your Bid
             </div>
-            <div style={{ fontSize: 12, color: "rgba(240,230,204,0.45)", textAlign: "center", marginBottom: 20 }}>
+            <div style={{ fontSize: 12, color: "rgba(240,230,204,0.45)", textAlign: "center", marginBottom: 16 }}>
               Raise the bid or pass
             </div>
+
+            {/* Display 5 initial cards */}
+            <div style={{
+              display: "flex", justifyContent: "center", gap: 8, marginBottom: 20,
+              padding: "12px", background: "rgba(0,0,0,0.3)", borderRadius: 12,
+            }}>
+              {myHand.slice(0, 5).map((card, i) => {
+                const rank = card.slice(0, -1);
+                const suit = card.slice(-1);
+                const red = ["♥", "♦"].includes(suit);
+                return (
+                  <div key={card} style={{
+                    width: 48, height: 68, background: "#fff",
+                    borderRadius: 6, border: "1.5px solid #ccc",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                    display: "flex", flexDirection: "column",
+                    alignItems: "center", justifyContent: "center",
+                    position: "relative", fontFamily: "serif",
+                  }}>
+                    <span style={{
+                      position: "absolute", top: 2, left: 3, fontSize: 11,
+                      fontWeight: 700, color: red ? "#e74c3c" : "#111", lineHeight: 1,
+                    }}>{rank}</span>
+                    <span style={{ fontSize: 20, color: red ? "#e74c3c" : "#111" }}>{suit}</span>
+                  </div>
+                );
+              })}
+            </div>
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
               {validBids.filter(b => b !== "pass").map(b => (
                 <button key={b} onClick={() => placeBid(b)} style={{
-                  padding: "13px 0", borderRadius: 12, fontSize: 20, fontWeight: 700,
+                  padding: "13px 0", borderRadius: 12, fontSize: 18, fontWeight: 700,
                   background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.32)",
                   color: "#f0e6cc", cursor: "pointer",
                 }}>
