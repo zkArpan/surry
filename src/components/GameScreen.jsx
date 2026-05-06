@@ -44,8 +44,8 @@ export default function GameScreen({
           const spread = Math.min(n * 5.5, 52);
           let tx = 0, ty = 0, rot = 0;
           if (position === "top") {
-            tx = t * spread; ty = Math.abs(t) * 7;
-            rot = t * Math.min(n * 3, 26);
+            tx = t * spread; ty = -Math.abs(t) * 7;
+            rot = 180 + t * Math.min(n * 3, 26);
           } else if (position === "left") {
             ty = t * spread; tx = Math.abs(t) * 5;
             rot = 90 + t * Math.min(n * 2.5, 20);
@@ -159,6 +159,51 @@ export default function GameScreen({
     );
   };
 
+  // ── recent pile ──────────────────────────────────────────────────────────
+  const RecentPile = () => {
+    const lastTrick = (pile || []).slice(-4);
+    if (!lastTrick.length) return null;
+    return (
+      <div className="flex flex-col items-center gap-1 mt-4 opacity-75 hover:opacity-100 transition-opacity">
+        <div style={{ fontSize: 10, color: "rgba(201,168,76,0.8)", fontWeight: 700, letterSpacing: 1 }}>
+          PILE ({pileCount})
+        </div>
+        <div className="relative" style={{ width: 100, height: 60 }}>
+          {lastTrick.map((play, idx) => {
+            const xOff = idx * 12 - 18;
+            const yOff = 0;
+            const rot = (idx - 1.5) * 8;
+            const rank = play.card.slice(0, -1);
+            const suit = play.card.slice(-1);
+            const red = ["♥", "♦"].includes(suit);
+            return (
+              <div key={`pile-${play.seat}-${play.card}-${idx}`} className="absolute" style={{
+                left: "50%", top: "50%",
+                transform: `translate(calc(-50% + ${xOff}px), calc(-50% + ${yOff}px)) rotate(${rot}deg)`,
+                zIndex: idx,
+              }}>
+                <div style={{
+                  width: 38, height: 54, background: "#e8e8e8",
+                  borderRadius: 4, border: "1px solid #999",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.5)",
+                  display: "flex", flexDirection: "column",
+                  alignItems: "center", justifyContent: "center",
+                  position: "relative", fontFamily: "serif",
+                }}>
+                  <span style={{
+                    position: "absolute", top: 2, left: 3, fontSize: 10,
+                    fontWeight: 700, color: red ? "#c0392b" : "#333", lineHeight: 1,
+                  }}>{rank}</span>
+                  <span style={{ fontSize: 16, color: red ? "#c0392b" : "#333" }}>{suit}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   // ── my hand ──────────────────────────────────────────────────────────────
   const MyHand = () => {
     const count = myHand.length;
@@ -240,37 +285,23 @@ export default function GameScreen({
 
       {/* ── TOP BAR ── */}
       <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-3 z-40">
-        <button
-          onClick={() => setShowStats(true)}
-          style={{
-            width: 38, height: 38, borderRadius: "50%", fontSize: 18,
-            background: "rgba(15,8,2,0.72)", border: "1px solid rgba(255,255,255,0.14)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer",
-          }}
-        >🏆</button>
-
-        <div style={{
-          display: "flex", alignItems: "center", gap: 12,
-          padding: "6px 18px", borderRadius: 999,
-          background: "rgba(15,8,2,0.80)", border: "1px solid rgba(255,255,255,0.14)",
-          color: "#f0e6cc", fontSize: 13, fontFamily: "sans-serif",
-        }}>
-          <span style={{ fontWeight: 600 }}>Round {gs.round_number || 1}</span>
-          <span style={{ color: "rgba(255,255,255,0.28)" }}>|</span>
-          <span>
-            Trump{" "}
-            <span style={{ color: trumpColor, fontWeight: 700 }}>
-              {trumpSymbol}{" "}
-              {gs.trump_suit ? gs.trump_suit.charAt(0).toUpperCase() + gs.trump_suit.slice(1) : "—"}
-            </span>
-          </span>
-          <span style={{ color: "rgba(255,255,255,0.28)" }}>|</span>
-          <span>
-            Bid{" "}
-            <span style={{ color: "#c9a84c", fontWeight: 700 }}>{gs.winning_bid || "?"}</span>
-            {" "}by {getPlayerAt(gs.bid_winner_seat)?.player_name || "?"}
-          </span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowStats(true)}
+            style={{
+              width: 38, height: 38, borderRadius: "50%", fontSize: 18,
+              background: "rgba(15,8,2,0.72)", border: "1px solid rgba(255,255,255,0.14)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer",
+            }}
+          >📊</button>
+          <div style={{
+            padding: "6px 14px", borderRadius: 999,
+            background: "rgba(15,8,2,0.80)", border: "1px solid rgba(255,255,255,0.14)",
+            color: "#f0e6cc", fontSize: 13, fontFamily: "sans-serif", fontWeight: 600
+          }}>
+            Round {gs.round_number || 1}
+          </div>
         </div>
 
         <button
@@ -281,14 +312,13 @@ export default function GameScreen({
             display: "flex", alignItems: "center", justifyContent: "center",
             cursor: "pointer",
           }}
-        >⚙️</button>
+        >🚪</button>
       </div>
 
       {/* ── TOP OPPONENT ── */}
       <div className="absolute flex flex-col items-center gap-1.5" style={{
-        top: 56, left: "50%", transform: "translateX(-50%)",
+        top: -10, left: "50%", transform: "translateX(-50%)", zIndex: 30,
       }}>
-        <PlayerPill p={topP} seat={topSeat} />
         <div className="relative" style={{ width: 120, height: 106 }}>
           <OpponentFan count={getHandSize(topSeat)} position="top" active={isActive(topSeat)} />
           <div className="absolute" style={{ left: "50%", top: "50%", transform: "translate(-50%,-50%)", zIndex: 20 }}>
@@ -301,7 +331,6 @@ export default function GameScreen({
       <div className="absolute flex flex-col items-center gap-2" style={{
         top: "50%", left: 10, transform: "translateY(-50%)",
       }}>
-        <PlayerPill p={leftP} seat={leftSeat} />
         <div className="relative" style={{ width: 120, height: 120 }}>
           <OpponentFan count={getHandSize(leftSeat)} position="left" active={isActive(leftSeat)} />
           <div className="absolute" style={{ left: "50%", top: "50%", transform: "translate(-50%,-50%)", zIndex: 20 }}>
@@ -314,7 +343,6 @@ export default function GameScreen({
       <div className="absolute flex flex-col items-center gap-2" style={{
         top: "50%", right: 10, transform: "translateY(-50%)",
       }}>
-        <PlayerPill p={rightP} seat={rightSeat} />
         <div className="relative" style={{ width: 120, height: 120 }}>
           <OpponentFan count={getHandSize(rightSeat)} position="right" active={isActive(rightSeat)} />
           <div className="absolute" style={{ left: "50%", top: "50%", transform: "translate(-50%,-50%)", zIndex: 20 }}>
@@ -328,16 +356,7 @@ export default function GameScreen({
         top: "50%", left: "50%", transform: "translate(-50%, -55%)",
       }}>
         <CenterTrick />
-        {pileCount > 0 && (
-          <div style={{
-            padding: "3px 14px", borderRadius: 999,
-            background: "rgba(15,8,2,0.80)", border: "1px solid rgba(255,255,255,0.14)",
-            color: "#f0e6cc", fontSize: 13, fontFamily: "sans-serif",
-          }}>
-            Pile:{" "}
-            <span style={{ color: "#c9a84c", fontWeight: 700 }}>{pileCount}</span>
-          </div>
-        )}
+        <RecentPile />
         {gs.consecutive_wins > 0 && gs.pile_owner_seat !== null && (
           <div style={{
             padding: "2px 10px", borderRadius: 999,
@@ -370,9 +389,31 @@ export default function GameScreen({
         <MyHand />
       </div>
 
+      {/* ── BOTTOM CORNERS: TRUMP & BID ── */}
+      <div className="absolute bottom-4 left-4 z-40" style={{
+        padding: "6px 14px", borderRadius: 999,
+        background: "rgba(15,8,2,0.80)", border: "1px solid rgba(255,255,255,0.14)",
+        color: "#f0e6cc", fontSize: 12, fontFamily: "sans-serif",
+      }}>
+        Trump{" "}
+        <span style={{ color: trumpColor, fontWeight: 700 }}>
+          {trumpSymbol} {gs.trump_suit ? gs.trump_suit.charAt(0).toUpperCase() + gs.trump_suit.slice(1) : "—"}
+        </span>
+      </div>
+
+      <div className="absolute bottom-4 right-4 z-40" style={{
+        padding: "6px 14px", borderRadius: 999,
+        background: "rgba(15,8,2,0.80)", border: "1px solid rgba(255,255,255,0.14)",
+        color: "#f0e6cc", fontSize: 12, fontFamily: "sans-serif",
+      }}>
+        Bid{" "}
+        <span style={{ color: "#c9a84c", fontWeight: 700 }}>{gs.winning_bid || "?"}</span>
+        {" "}by {getPlayerAt(gs.bid_winner_seat)?.player_name || "?"}
+      </div>
+
       {/* ── PLAY BUTTON ── */}
       {gs.phase === "playing" && isMyTurn && selectedCard && (
-        <div className="absolute z-50" style={{ bottom: 18, right: 14 }}>
+        <div className="absolute z-50" style={{ bottom: 50, right: 14 }}>
           <button
             onClick={() => { playCard(selectedCard); setSelectedCard(null); }}
             style={{
