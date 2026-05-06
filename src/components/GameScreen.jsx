@@ -100,7 +100,7 @@ export default function GameScreen({
   };
 
   return (
-    <div className="h-screen w-full flex flex-col bg-surry-bg text-surry-cream font-sans overflow-hidden">
+    <div className="h-screen w-full flex flex-col bg-surry-bg text-surry-cream font-sans overflow-hidden mobile-landscape-force">
 
       {/* HEADER */}
       <header className="h-16 shrink-0 border-b border-surry-border px-6 flex items-center justify-between">
@@ -151,7 +151,7 @@ export default function GameScreen({
           </button>
 
           {/* TABLE */}
-          <div className="w-full max-w-[1200px] aspect-[16/9] max-h-[80vh] relative rounded-[140px] border-[16px] border-surry-table-border bg-surry-green-dark shadow-[inset_0_0_120px_rgba(0,0,0,0.8),0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-center">
+          <div className="w-full max-w-[1200px] aspect-[16/9] max-h-[80%] relative rounded-[140px] border-[16px] border-surry-table-border bg-surry-green-dark shadow-[inset_0_0_120px_rgba(0,0,0,0.8),0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-center">
 
             {/* Center Area */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center">
@@ -235,7 +235,7 @@ export default function GameScreen({
         </div>
 
         {/* RIGHT: SIDEBAR */}
-        <div className="w-[320px] shrink-0 border-l border-surry-border bg-surry-bg2 flex flex-col">
+        <div className="hidden md:flex w-[320px] shrink-0 border-l border-surry-border bg-surry-bg2 flex-col">
           <div className="h-16 px-6 flex items-center justify-between border-b border-surry-border text-[0.9rem]">
             <span>Live Feed</span>
             <button className="text-surry-cream-d">^</button>
