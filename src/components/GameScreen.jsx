@@ -108,20 +108,14 @@ export default function GameScreen({
   };
 
   return (
-    <div className="h-screen w-full relative bg-black text-surry-cream font-sans overflow-hidden mobile-landscape-force p-2 lg:p-4">
+    <div className="h-screen w-full relative bg-black text-surry-cream font-sans overflow-hidden mobile-landscape-force">
        
        {/* Background Table Element */}
-       <div className="absolute inset-2 lg:inset-4 rounded-[60px] lg:rounded-[140px] border-[12px] lg:border-[20px] border-[#3e1e04] bg-[#0d2f1a] shadow-[inset_0_0_100px_rgba(0,0,0,0.9),0_20px_50px_rgba(0,0,0,0.8)] pointer-events-none">
+       <div className="absolute inset-0 bg-[#0d2f1a] shadow-[inset_0_0_150px_rgba(0,0,0,0.9)] pointer-events-none">
        </div>
 
        {/* Floating Header */}
-       <div className="absolute top-6 left-8 right-8 flex items-center justify-between z-50 pointer-events-auto">
-          <div className="flex items-center gap-4">
-             <button className="text-3xl text-white/70 hover:text-white transition-colors">≡</button>
-             <div className="hidden md:flex items-center gap-2 text-surry-gold font-serif text-2xl tracking-[2px] font-bold">
-               <span className="text-[1.2em] leading-none drop-shadow-md">♠</span> <span className="drop-shadow-md">SURRY</span>
-             </div>
-          </div>
+       <div className="absolute top-6 left-8 right-8 flex items-start justify-between z-50 pointer-events-auto">
           
           <div className="flex items-center gap-4 text-[0.75rem] px-6 py-2.5 rounded-full border border-white/10 bg-black/40 backdrop-blur-md shadow-lg font-medium">
             <span className="text-white">Round {gs.round_number || 1}</span>
@@ -137,7 +131,6 @@ export default function GameScreen({
                <span className={`w-2 h-2 rounded-full ${roomPlayers.length === 4 ? 'bg-green-500' : 'bg-surry-gold animate-pulse'}`}></span>
              </div>
              <button className="text-surry-red hover:text-red-400 font-medium px-4 py-1.5 rounded-full border border-surry-red/30 bg-black/40 backdrop-blur-md text-sm transition-colors" onClick={() => setShowExitConfirm(true)}>Leave</button>
-             <button className="text-2xl text-white/70 hover:text-white transition-colors">⚙️</button>
           </div>
        </div>
 
@@ -146,7 +139,7 @@ export default function GameScreen({
           
           {/* Top Opponent */}
           {topOpp.p && (
-            <div className="absolute top-24 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-50">
               <Avatar name={topOpp.p.player_name} active={topOpp.isActive} score={0} />
               {topOpp.bid && <div className="text-[0.7rem] bg-black/60 px-3 py-1 rounded-full text-surry-gold border border-surry-gold/30 mt-[-4px]">Bid {topOpp.bid}</div>}
               <OpponentFan size={topOpp.size} position="top" />
@@ -202,13 +195,7 @@ export default function GameScreen({
 
        </div>
 
-       {/* Floating Bottom Left (Chat) and Bottom Right (Sort) */}
-       <button className="absolute bottom-8 left-8 flex items-center gap-2 px-6 py-2.5 rounded-full bg-black/60 border border-white/10 hover:border-white/30 hover:bg-black/80 backdrop-blur-md text-[0.9rem] z-50 pointer-events-auto transition-all shadow-lg font-medium text-white/90">
-          💬 Chat
-       </button>
-       <button className="absolute bottom-8 right-8 flex items-center gap-2 px-6 py-2.5 rounded-full bg-black/60 border border-white/10 hover:border-white/30 hover:bg-black/80 backdrop-blur-md text-[0.9rem] z-50 pointer-events-auto transition-all shadow-lg font-medium text-white/90">
-          Sort ↕
-       </button>
+       {/* Floating Bottom Left (Chat) and Bottom Right (Sort) Removed */}
 
        {/* Play Card Button */}
        {gs.phase === "playing" && isMyTurn && selectedCard && (
