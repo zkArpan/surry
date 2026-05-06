@@ -311,12 +311,12 @@ export default function GameScreen({
         <button
           onClick={() => setShowExitConfirm(true)}
           style={{
-            width: 50, height: 50, borderRadius: 8, fontSize: 28,
+            width: 35, height: 35, borderRadius: 6, fontSize: 20,
             background: "#c0392b",
-            border: "3px solid #8b2c23",
+            border: "2px solid #8b2c23",
             display: "flex", alignItems: "center", justifyContent: "center",
             cursor: "pointer",
-            boxShadow: "0 4px 12px rgba(192, 57, 43, 0.6)",
+            boxShadow: "0 3px 8px rgba(192, 57, 43, 0.6)",
             fontWeight: 700,
             color: "#fff",
             flexShrink: 0,
@@ -325,18 +325,18 @@ export default function GameScreen({
 
         {/* Round number */}
         <div style={{
-          padding: "8px 14px", borderRadius: 8,
+          padding: "6px 10px", borderRadius: 6,
           background: "rgba(15,8,2,0.85)", border: "1px solid rgba(255,255,255,0.14)",
-          color: "#f0e6cc", fontSize: 12, fontFamily: "sans-serif", fontWeight: 600
+          color: "#f0e6cc", fontSize: 10, fontFamily: "sans-serif", fontWeight: 600
         }}>
           Round {gs.round_number || 1}
         </div>
 
         {/* Bid */}
         <div style={{
-          padding: "8px 14px", borderRadius: 8,
+          padding: "6px 10px", borderRadius: 6,
           background: "rgba(15,8,2,0.85)", border: "1px solid rgba(255,255,255,0.14)",
-          color: "#f0e6cc", fontSize: 12, fontFamily: "sans-serif", fontWeight: 600
+          color: "#f0e6cc", fontSize: 10, fontFamily: "sans-serif", fontWeight: 600
         }}>
           Bid <span style={{ color: "#c9a84c", fontWeight: 700 }}>{gs.winning_bid || "?"}</span>
           {" "}by <span style={{ color: "rgba(201,168,76,0.8)" }}>{getPlayerAt(gs.bid_winner_seat)?.player_name || "—"}</span>
@@ -344,9 +344,9 @@ export default function GameScreen({
 
         {/* Trump */}
         <div style={{
-          padding: "8px 14px", borderRadius: 8,
+          padding: "6px 10px", borderRadius: 6,
           background: "rgba(15,8,2,0.85)", border: "1px solid rgba(255,255,255,0.14)",
-          color: "#f0e6cc", fontSize: 12, fontFamily: "sans-serif", fontWeight: 600
+          color: "#f0e6cc", fontSize: 10, fontFamily: "sans-serif", fontWeight: 600
         }}>
           Trump <span style={{ color: trumpColor, fontWeight: 700 }}>
             {trumpSymbol} {gs.trump_suit ? gs.trump_suit.charAt(0).toUpperCase() + gs.trump_suit.slice(1) : "—"}
@@ -355,7 +355,7 @@ export default function GameScreen({
       </div>
 
       {/* ── TOP CENTER: TOP OPPONENT AVATAR & NAME ── */}
-      <div className="absolute top-6 left-1/2 z-50" style={{ transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+      <div className="absolute top-0 left-1/2 z-50" style={{ transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
         <AvatarOnly p={topP} seat={topSeat} size={48} />
         <div style={{ fontSize: 10, color: "#f0e6cc", fontFamily: "sans-serif", fontWeight: 600, whiteSpace: "nowrap" }}>
           {topP?.player_name || "—"}
@@ -367,7 +367,7 @@ export default function GameScreen({
         <button
           onClick={toggleMic}
           style={{
-            width: 40, height: 40, borderRadius: 8, fontSize: 16,
+            width: 28, height: 28, borderRadius: 6, fontSize: 12,
             background: isMicMuted ? "rgba(150,30,30,0.8)" : "rgba(15,8,2,0.72)",
             border: "1px solid rgba(255,255,255,0.14)",
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -377,7 +377,7 @@ export default function GameScreen({
         <button
           onClick={toggleSpeaker}
           style={{
-            width: 40, height: 40, borderRadius: 8, fontSize: 16,
+            width: 28, height: 28, borderRadius: 6, fontSize: 12,
             background: isSpeakerMuted ? "rgba(150,30,30,0.8)" : "rgba(15,8,2,0.72)",
             border: "1px solid rgba(255,255,255,0.14)",
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -387,7 +387,7 @@ export default function GameScreen({
         <button
           onClick={() => setShowStats(true)}
           style={{
-            width: 40, height: 40, borderRadius: 8, fontSize: 16,
+            width: 28, height: 28, borderRadius: 6, fontSize: 12,
             background: "rgba(15,8,2,0.72)", border: "1px solid rgba(255,255,255,0.14)",
             display: "flex", alignItems: "center", justifyContent: "center",
             cursor: "pointer",
