@@ -33,29 +33,29 @@ export default function GameScreen({
 
   const Avatar = ({ name, active, score = 0, isLocal = false }) => (
     <div className="flex flex-col items-center gap-1">
-       {!isLocal && <div className="text-[0.8rem] font-medium text-white shadow-black drop-shadow-md">{name}</div>}
+       {!isLocal && <div className="text-[0.7rem] font-medium text-white shadow-black drop-shadow-md">{name}</div>}
        <div className="relative">
-         <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl font-serif font-bold ${active ? 'ring-2 ring-surry-gold shadow-[0_0_15px_rgba(201,168,76,0.8)]' : 'ring-2 ring-[#a38036] shadow-[inset_0_0_10px_rgba(0,0,0,0.8)]'} bg-[#1a1a1a] text-surry-cream z-20`}>
+         <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-lg sm:text-xl font-serif font-bold ${active ? 'ring-2 ring-surry-gold shadow-[0_0_15px_rgba(201,168,76,0.8)]' : 'ring-2 ring-[#a38036] shadow-[inset_0_0_10px_rgba(0,0,0,0.8)]'} bg-[#1a1a1a] text-surry-cream z-20`}>
            {name ? name.charAt(0).toUpperCase() : '?'}
          </div>
        </div>
-       {isLocal && <div className="text-[0.8rem] font-medium text-white/80 mt-1">You</div>}
+       {isLocal && <div className="text-[0.7rem] font-medium text-white/80 mt-1">You</div>}
     </div>
   );
 
   const OpponentFan = ({ size, position }) => {
     if (size === 0) return null;
     return (
-      <div className="relative flex justify-center items-center pointer-events-none z-10" style={{ width: '80px', height: '60px' }}>
+      <div className="relative flex justify-center items-center pointer-events-none z-10 scale-[0.6] sm:scale-[0.85]" style={{ width: '80px', height: '60px' }}>
         {Array.from({ length: size }).map((_, i) => {
-          const rotation = (i - (size - 1) / 2) * 6;
-          const xOffset = (i - (size - 1) / 2) * 12;
-          const yOffset = Math.abs(i - (size - 1) / 2) * 3;
+          const rotation = (i - (size - 1) / 2) * 5;
+          const xOffset = (i - (size - 1) / 2) * 10;
+          const yOffset = Math.abs(i - (size - 1) / 2) * 2;
           
           let globalTransform = '';
-          if (position === 'left') globalTransform = 'rotate(90deg) translate(40px, 0)';
-          if (position === 'right') globalTransform = 'rotate(-90deg) translate(40px, 0)';
-          if (position === 'top') globalTransform = 'translate(0, 30px) rotate(180deg)';
+          if (position === 'left') globalTransform = 'rotate(90deg)';
+          if (position === 'right') globalTransform = 'rotate(-90deg)';
+          if (position === 'top') globalTransform = 'rotate(180deg)';
 
           return (
             <div key={i} className="absolute" style={{ transform: `${globalTransform} translate(${xOffset}px, ${yOffset}px) rotate(${rotation}deg)` }}>
@@ -69,7 +69,7 @@ export default function GameScreen({
 
   const MyFan = () => {
     return (
-      <div className="relative flex justify-center items-end h-[140px] mb-8 z-30 pointer-events-auto w-full max-w-[800px]">
+      <div className="relative flex justify-center items-end h-[100px] sm:h-[140px] mb-4 sm:mb-8 z-30 pointer-events-auto w-full max-w-[800px] scale-[0.6] sm:scale-100 origin-bottom">
         {myHand.map((card, i) => {
           const isPlayable = gs.phase === "playing" ? playable.includes(card) : false;
           const isSelected = selectedCard === card;
@@ -77,7 +77,7 @@ export default function GameScreen({
           
           // Fan math for a wider, flatter arc matching the inspiration
           const rotation = (i - (size - 1) / 2) * 3;
-          const xOffset = (i - (size - 1) / 2) * 45; 
+          const xOffset = (i - (size - 1) / 2) * 35; 
           const yOffset = Math.abs(i - (size - 1) / 2) * Math.abs(i - (size - 1) / 2) * 1.2; 
           const activeOffset = isSelected ? -30 : 0;
 
@@ -115,22 +115,22 @@ export default function GameScreen({
        </div>
 
        {/* Floating Header */}
-       <div className="absolute top-6 left-8 right-8 flex items-start justify-between z-50 pointer-events-auto">
+       <div className="absolute top-4 left-4 right-4 flex items-start justify-between z-50 pointer-events-auto">
           
-          <div className="flex items-center gap-4 text-[0.75rem] px-6 py-2.5 rounded-full border border-white/10 bg-black/40 backdrop-blur-md shadow-lg font-medium">
-            <span className="text-white">Round {gs.round_number || 1}</span>
+          <div className="flex items-center gap-2 sm:gap-4 text-[0.65rem] sm:text-[0.75rem] px-4 sm:px-6 py-2 rounded-full border border-white/10 bg-black/60 backdrop-blur-md shadow-lg font-medium">
+            <span className="text-white whitespace-nowrap">Round {gs.round_number || 1}</span>
             <span className="text-white/20">|</span>
-            <span className="text-white flex items-center gap-1">Trump <span className={["♥", "♦"].includes(trumpSymbol) ? "text-red-500" : "text-white"}>{trumpSymbol} {gs.trump_suit || "None"}</span></span>
+            <span className="text-white flex items-center gap-1 whitespace-nowrap">Trump <span className={["♥", "♦"].includes(trumpSymbol) ? "text-red-500" : "text-white"}>{trumpSymbol} {gs.trump_suit || "None"}</span></span>
             <span className="text-white/20">|</span>
-            <span className="text-white">Bid <span className="text-surry-gold text-sm">{gs.winning_bid || "?"}</span> <span className="text-white/60 font-normal">by {getPlayerAt(gs.bid_winner_seat)?.player_name || "?"}</span></span>
+            <span className="text-white whitespace-nowrap">Bid <span className="text-surry-gold font-bold ml-0.5">{gs.winning_bid || "?"}</span> <span className="text-white/60 font-normal hidden sm:inline ml-1">by {getPlayerAt(gs.bid_winner_seat)?.player_name || "?"}</span></span>
           </div>
 
           <div className="flex items-center gap-4">
-             <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-black/40 backdrop-blur-md text-[0.8rem] shadow-lg hidden md:flex">
+             <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-black/60 backdrop-blur-md text-[0.7rem] sm:text-[0.8rem] shadow-lg hidden sm:flex">
                <span>👥 {roomPlayers.length} / 4</span>
                <span className={`w-2 h-2 rounded-full ${roomPlayers.length === 4 ? 'bg-green-500' : 'bg-surry-gold animate-pulse'}`}></span>
              </div>
-             <button className="text-surry-red hover:text-red-400 font-medium px-4 py-1.5 rounded-full border border-surry-red/30 bg-black/40 backdrop-blur-md text-sm transition-colors" onClick={() => setShowExitConfirm(true)}>Leave</button>
+             <button className="text-surry-red hover:text-red-400 font-medium px-4 py-1.5 rounded-full border border-surry-red/30 bg-black/60 backdrop-blur-md text-[0.7rem] sm:text-sm transition-colors" onClick={() => setShowExitConfirm(true)}>Leave</button>
           </div>
        </div>
 
@@ -139,19 +139,19 @@ export default function GameScreen({
           
           {/* Top Opponent */}
           {topOpp.p && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-50">
+            <div className="absolute top-[12%] sm:top-20 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-40">
               <Avatar name={topOpp.p.player_name} active={topOpp.isActive} score={0} />
-              {topOpp.bid && <div className="text-[0.7rem] bg-black/60 px-3 py-1 rounded-full text-surry-gold border border-surry-gold/30 mt-[-4px]">Bid {topOpp.bid}</div>}
+              {topOpp.bid && <div className="text-[0.6rem] bg-black/80 px-3 py-0.5 rounded-full text-surry-gold border border-surry-gold/30">Bid {topOpp.bid}</div>}
               <OpponentFan size={topOpp.size} position="top" />
             </div>
           )}
 
           {/* Left Opponent */}
           {leftOpp.p && (
-            <div className="absolute left-12 top-1/2 -translate-y-1/2 flex items-center gap-8">
-              <div className="flex flex-col items-center gap-2">
+            <div className="absolute left-2 sm:left-12 top-1/2 -translate-y-1/2 flex items-center gap-2 sm:gap-8">
+              <div className="flex flex-col items-center gap-1">
                  <Avatar name={leftOpp.p.player_name} active={leftOpp.isActive} score={0} />
-                 {leftOpp.bid && <div className="text-[0.7rem] bg-black/60 px-3 py-1 rounded-full text-surry-gold border border-surry-gold/30">Bid {leftOpp.bid}</div>}
+                 {leftOpp.bid && <div className="text-[0.6rem] bg-black/80 px-3 py-0.5 rounded-full text-surry-gold border border-surry-gold/30">Bid {leftOpp.bid}</div>}
               </div>
               <OpponentFan size={leftOpp.size} position="left" />
             </div>
@@ -159,10 +159,10 @@ export default function GameScreen({
 
           {/* Right Opponent */}
           {rightOpp.p && (
-            <div className="absolute right-12 top-1/2 -translate-y-1/2 flex items-center gap-8 flex-row-reverse">
-              <div className="flex flex-col items-center gap-2">
+            <div className="absolute right-2 sm:right-12 top-1/2 -translate-y-1/2 flex items-center gap-2 sm:gap-8 flex-row-reverse">
+              <div className="flex flex-col items-center gap-1">
                  <Avatar name={rightOpp.p.player_name} active={rightOpp.isActive} score={0} />
-                 {rightOpp.bid && <div className="text-[0.7rem] bg-black/60 px-3 py-1 rounded-full text-surry-gold border border-surry-gold/30">Bid {rightOpp.bid}</div>}
+                 {rightOpp.bid && <div className="text-[0.6rem] bg-black/80 px-3 py-0.5 rounded-full text-surry-gold border border-surry-gold/30">Bid {rightOpp.bid}</div>}
               </div>
               <OpponentFan size={rightOpp.size} position="right" />
             </div>
