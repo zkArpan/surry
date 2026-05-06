@@ -186,10 +186,10 @@ export default function GameScreen({
     
     // Map each seat to its position in the + pattern
     const getPositionBySeat = (seat) => {
-      if (seat === topSeat) return { x: 0, y: -85, rot: 0 };      // top
-      if (seat === leftSeat) return { x: -85, y: 0, rot: 90 };    // left
-      if (seat === rightSeat) return { x: 85, y: 0, rot: -90 };   // right
-      if (seat === mySeat) return { x: 0, y: 85, rot: 0 };        // bottom
+      if (seat === topSeat) return { x: 0, y: -37, rot: 0 };      // top
+      if (seat === leftSeat) return { x: -37, y: 0, rot: 90 };    // left
+      if (seat === rightSeat) return { x: 37, y: 0, rot: -90 };   // right
+      if (seat === mySeat) return { x: 0, y: 37, rot: 0 };        // bottom
       return { x: 0, y: 0, rot: 0 };
     };
     
