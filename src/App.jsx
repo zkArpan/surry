@@ -128,7 +128,7 @@ const CSS = `
   .team-b{color:#f4a261;}
   /* Game table */
   .game-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:1rem;}
-  .table-area{position:relative;width:100%;max-width:700px;aspect-ratio:1.4;background:radial-gradient(ellipse at center,#1e4d2b 0%,#0d2415 100%);border-radius:50%;border:3px solid rgba(201,168,76,0.3);box-shadow:inset 0 0 60px rgba(0,0,0,0.5),0 0 40px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;}
+  .table-area{position:relative;width:100%;max-width:700px;height:400px;background:linear-gradient(135deg,#1e4d2b 0%,#0d2415 100%);border-radius:12px;border:3px solid rgba(201,168,76,0.3);box-shadow:inset 0 0 60px rgba(0,0,0,0.5),0 0 40px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;}
   .table-center-layer{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;}
   .pile-stack{pointer-events:none;opacity:0.95;filter:drop-shadow(0 10px 24px rgba(0,0,0,0.45));}
   .pile-stack-cards{position:relative;width:88px;height:118px;}
@@ -149,6 +149,15 @@ const CSS = `
   .trick-slot{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:70px;}
   .trick-slot.left,.trick-slot.right{min-width:86px;}
   .trick-label{font-size:0.58rem;color:var(--cream-d);letter-spacing:0.5px;max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.08);padding:1px 6px;border-radius:999px;}
+  /* Trick cards positioned at seats */
+  .trick-card-container{position:absolute;width:100%;height:100%;}
+  .trick-card{position:absolute;display:flex;flex-direction:column;align-items:center;gap:3px;transition:all 0.6s cubic-bezier(0.25,0.46,0.45,0.94);}
+  .trick-card.animated-center{transform:translate(-50%,-50%);left:50% !important;top:50% !important;}
+  .trick-card.bottom{bottom:10%;left:50%;transform:translateX(-50%);}
+  .trick-card.right{right:8%;top:50%;transform:translateY(-50%);}
+  .trick-card.top{top:10%;left:50%;transform:translateX(-50%);}
+  .trick-card.left{left:8%;top:50%;transform:translateY(-50%);}
+  .trick-card-label{font-size:0.58rem;color:var(--cream-d);letter-spacing:0.5px;max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.08);padding:1px 6px;border-radius:999px;}
   /* Cards */
   .card{width:44px;height:62px;background:white;border-radius:5px;border:1px solid #ccc;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:0.9rem;font-weight:700;cursor:default;position:relative;flex-shrink:0;transition:transform 0.15s,box-shadow 0.15s;}
   .card.red{color:var(--suit-red);}
@@ -237,30 +246,37 @@ function CardView({ card, small, playable, selected, onClick, faceDown }) {
 
 // ── Trick display ──────────────────────────────────────────────────────────────
 function TrickDisplay({ trick, mySeat, roomPlayers }) {
-  // positions: bottom=me, top=opposite, left=right-1, right=left+1
-  const pos = ["bottom","left","top","right"];
-  // trick is [{seat, card}, ...]
-  const byPos = {};
-  const nameByPos = {};
-  if (trick) {
+  // Position map: bottom=me, right=seat+1, top=seat+2, left=seat+3
+  const pos = ["bottom","right","top","left"];
+  const animateToCenter = trick && trick.length === 4;
+  
+  // Create positioned cards
+  const cards = [];
+  if (trick && trick.length > 0) {
     for (const play of trick) {
       const relSeat = ((play.seat - mySeat) + 4) % 4;
-      byPos[pos[relSeat]] = play.card;
-      nameByPos[pos[relSeat]] =
-        roomPlayers?.find(p => p.seat === play.seat)?.player_name || `Seat ${play.seat+1}`;
+      const position = pos[relSeat];
+      const playerName = roomPlayers?.find(p => p.seat === play.seat)?.player_name || `Seat ${play.seat+1}`;
+      cards.push({
+        position,
+        card: play.card,
+        name: playerName,
+        key: `${play.seat}-${play.card}`
+      });
     }
   }
-  const Slot = ({ where, card }) => (
-    <div className={`trick-slot ${where}`}>
-      {card ? <div className="trick-label">{nameByPos[where] || ""}</div> : <div style={{height:18}} />}
-      <CardView card={card} small />
-    </div>
-  );
+
   return (
-    <div style={{display:"grid",gridTemplateColumns:"1fr 60px 1fr",gridTemplateRows:"1fr 60px 1fr",width:180,height:140,alignItems:"center",justifyItems:"center"}}>
-      <div/><Slot where="top" card={byPos.top}/><div/>
-      <Slot where="left" card={byPos.left}/><div style={{width:20,height:20,borderRadius:"50%",background:"rgba(255,255,255,0.1)"}}/><Slot where="right" card={byPos.right}/>
-      <div/><Slot where="bottom" card={byPos.bottom}/><div/>
+    <div className="trick-card-container">
+      {cards.map(item => (
+        <div
+          key={item.key}
+          className={`trick-card ${item.position} ${animateToCenter ? 'animated-center' : ''}`}
+        >
+          <div className="trick-card-label">{item.name}</div>
+          <CardView card={item.card} small />
+        </div>
+      ))}
     </div>
   );
 }
@@ -308,6 +324,8 @@ export default function App() {
   const [showSold, setShowSold] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   const channelRef = useRef(null);
 
   const saveName = (n) => { setPlayerName(n); localStorage.setItem("surry_name",n); };
@@ -715,6 +733,78 @@ export default function App() {
     }).eq("room_id", roomId);
   };
 
+  // ── Exit game ──────────────────────────────────────────────────────────────
+  const exitGame = async () => {
+    setShowExitConfirm(false);
+    setLoading(true);
+    try {
+      if (!roomId || mySeat === null) {
+        setScreen("home");
+        setLoading(false);
+        return;
+      }
+
+      // Delete player from room_players
+      const { error: delErr } = await supabase
+        .from("room_players")
+        .delete()
+        .eq("room_id", roomId)
+        .eq("player_id", playerId);
+
+      if (delErr) {
+        console.error("Error removing player:", delErr);
+      }
+
+      // Check if game is in progress (not waiting)
+      const gameInProgress = gs && gs.phase && gs.phase !== "waiting";
+      
+      if (gameInProgress) {
+        // Delete game_state to terminate game for everyone
+        const { error: gsDelErr } = await supabase
+          .from("game_state")
+          .delete()
+          .eq("room_id", roomId);
+
+        if (gsDelErr) {
+          console.error("Error terminating game:", gsDelErr);
+        }
+      }
+
+      // Check remaining players
+      const { data: remainingPlayers, error: checkErr } = await supabase
+        .from("room_players")
+        .select("*")
+        .eq("room_id", roomId);
+
+      if (!checkErr && (!remainingPlayers || remainingPlayers.length === 0)) {
+        // Delete room if no players left
+        const { error: roomDelErr } = await supabase
+          .from("rooms")
+          .delete()
+          .eq("id", roomId);
+
+        if (roomDelErr) {
+          console.error("Error deleting room:", roomDelErr);
+        }
+      }
+
+      // Clear local storage
+      localStorage.removeItem("surry_room");
+      localStorage.removeItem("surry_seat");
+
+      // Reset state and go to home
+      setRoomId("");
+      setMySeat(null);
+      setRoomPlayers([]);
+      setGs(null);
+      setScreen("home");
+    } catch (err) {
+      console.error("Error during exit:", err);
+      setError("Error leaving game: " + (err.message || "Unknown error"));
+    }
+    setLoading(false);
+  };
+
   // ── Effects ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (screen === "game" && gs?.phase === "round_end" && !showResult) {
@@ -917,6 +1007,7 @@ export default function App() {
               {roomPlayers.length === 4 && [0,1,2,3].every(s => roomPlayers.some(p=>p.seat===s)) && (
                 <button className="btn btn-gold w-full" onClick={startGame}>Start Game</button>
               )}
+              <button className="btn btn-outline w-full mt-1" onClick={()=>setShowExitConfirm(true)}>Exit</button>
               {error && <div style={{color:"#e74c3c",fontSize:"0.75rem",marginTop:"0.5rem"}}>{error}</div>}
             </div>
           </div>
@@ -932,21 +1023,7 @@ export default function App() {
               {gs.trump_suit && <div className="info-chip">Trump <span style={{color:["♥","♦"].includes(trumpSymbol)?"var(--suit-red)":"var(--cream)"}}>{trumpSymbol} {gs.trump_suit}</span></div>}
               {gs.winning_bid && <div className="info-chip">Bid <span>{gs.winning_bid}</span> by <span>{getPlayerAt(gs.bid_winner_seat)?.player_name||"?"}</span></div>}
               <div className="info-chip">Round <span>{gs.round_number||1}</span></div>
-            </div>
-
-            {/* Score */}
-            <div className="score-wrap">
-              {["02","13"].map(t => (
-                <div key={t} className="score-card" style={{borderColor: t===myTeam?"rgba(201,168,76,0.4)":"var(--border)"}}>
-                  <div className="score-label">{t==="02"?"Team A (seats 1,3)":"Team B (seats 2,4)"}{t===myTeam?" · YOU":""}</div>
-                  <div style={{display:"flex",gap:"1rem",alignItems:"baseline"}}>
-                    <div><div style={{fontSize:"0.6rem",color:"var(--cream-d)"}}>pieces</div><div className="score-val">{pieces[t]||0}</div></div>
-                    <div><div style={{fontSize:"0.6rem",color:"var(--cream-d)"}}>tricks</div><div className="score-val" style={{fontSize:"1rem"}}>{secured[t]||0}</div></div>
-                    <div><div style={{fontSize:"0.6rem",color:"var(--cream-d)"}}>sold</div><div className="score-val" style={{fontSize:"1rem",color:"var(--red-l)"}}>{soldCount[t]||0}</div></div>
-                  </div>
-                  {gs.distributor_team === t && <div style={{fontSize:"0.6rem",color:"var(--red-l)",marginTop:4}}>▲ DISTRIBUTOR</div>}
-                </div>
-              ))}
+              <button className="btn btn-outline btn-sm" onClick={()=>setShowStats(true)} style={{marginLeft:"auto"}}>Stats</button>
             </div>
 
             {/* Table */}
@@ -970,37 +1047,24 @@ export default function App() {
                 );
               })}
 
-              {/* Center pile + current trick */}
+              {/* Current trick - positioned at seats */}
+              <TrickDisplay trick={trick} mySeat={mySeat} roomPlayers={roomPlayers}/>
+
+              {/* Center pile */}
               <div className="table-center-layer pile-under-trick">
                 <PileStack pile={pile} />
-              </div>
-              <div className="table-center-layer trick-over-pile">
-                <TrickDisplay trick={trick} mySeat={mySeat} roomPlayers={roomPlayers}/>
               </div>
             </div>
 
             {/* Phase-specific UI */}
             {gs.phase === "bidding" && (
               <div className="bid-panel">
-                <div style={{fontSize:"0.7rem",color:"var(--cream-d)"}}>
+                <div style={{fontSize:"0.7rem",color:"var(--cream-d)",marginBottom:"1rem"}}>
                   {isMyTurn ? "★ YOUR TURN TO BID" : `Waiting for ${getPlayerAt(gs.current_turn_seat)?.player_name||"..."}...`}
-                </div>
-                <div style={{fontSize:"0.65rem",color:"var(--cream-d)",marginTop:6}}>
-                  Seat: <span style={{color:"var(--cream)"}}>{mySeat===null?"?":(mySeat+1)}</span>{" "}
-                  · Hand cards: <span style={{color:"var(--cream)"}}>{(hands?.[mySeat]||[]).length}</span>
-                </div>
-                <div style={{fontSize:"0.62rem",color:"var(--cream-d)",marginTop:6,opacity:0.9,lineHeight:1.6}}>
-                  gs.phase: <span style={{color:"var(--cream)"}}>{String(gs?.phase||"")}</span>{" "}
-                  · hands keys: <span style={{color:"var(--cream)"}}>{hands ? Object.keys(hands).join(",") : "none"}</span>
-                  <br/>
-                  hand sizes:{" "}
-                  <span style={{color:"var(--cream)"}}>
-                    {["0","1","2","3"].map(k => `${k}:${(hands?.[k]||[]).length}`).join("  ")}
-                  </span>
                 </div>
                 <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid var(--border)"}}>
                   <div style={{fontSize:"0.65rem",color:"var(--cream-d)",marginBottom:6,letterSpacing:2,textAlign:"center"}}>
-                    Initial 5-card hand (use this to bid)
+                    Your Hand
                   </div>
                   <div className="hand-wrap" style={{maxWidth:"100%",padding:0}}>
                     {myHand.map(card => (
@@ -1099,7 +1163,7 @@ export default function App() {
               {log.map((l,i) => <div key={i} className="log-entry">{l}</div>)}
             </div>
 
-            <button className="btn btn-outline btn-sm" style={{marginTop:8}} onClick={()=>setScreen("room")}>← Lobby</button>
+            <button className="btn btn-outline btn-sm" style={{marginTop:8}} onClick={()=>setShowExitConfirm(true)}>Exit Game</button>
           </div>
         )}
 
@@ -1127,6 +1191,53 @@ export default function App() {
 
         {/* SOLD flash */}
         {showSold && <div className="sold-flash">SOLD!</div>}
+
+        {/* Exit confirmation modal */}
+        {showExitConfirm && (
+          <div className="result-overlay">
+            <div className="result-panel">
+              <div className="result-title">Exit Game?</div>
+              <div style={{marginBottom:"1.5rem",fontSize:"0.85rem",color:"var(--cream-d)",lineHeight:1.8}}>
+                {screen === "game" 
+                  ? "Leaving will end the game for all players since 4 players are required."
+                  : "Are you sure you want to leave the room?"}
+              </div>
+              <div style={{display:"flex",gap:"1rem",justifyContent:"center"}}>
+                <button className="btn btn-outline" onClick={()=>setShowExitConfirm(false)} disabled={loading}>
+                  Cancel
+                </button>
+                <button className="btn btn-gold" onClick={exitGame} disabled={loading} style={{background:"#c0392b"}}>
+                  {loading ? "Exiting..." : "Exit"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stats modal */}
+        {showStats && gs && (
+          <div className="result-overlay">
+            <div className="result-panel">
+              <div className="result-title">Game Stats</div>
+              <div style={{marginBottom:"1.5rem",lineHeight:2,fontSize:"0.85rem"}}>
+                {["02","13"].map(t => (
+                  <div key={t} style={{marginBottom:"1rem"}}>
+                    <div style={{color:t==="02"?"#7ec8e3":"#f4a261",fontSize:"0.9rem",fontWeight:500,marginBottom:"0.5rem"}}>
+                      {t==="02"?"Team A (seats 1,3)":"Team B (seats 2,4)"}{t===myTeam?" • YOU":""}
+                    </div>
+                    <div style={{paddingLeft:"1rem",color:"var(--cream-d)"}}>
+                      <div>Pieces: <span style={{color:"var(--gold)",fontWeight:500}}>{pieces[t]||0}</span></div>
+                      <div>Tricks: <span style={{color:"var(--gold)",fontWeight:500}}>{secured[t]||0}</span></div>
+                      <div>Times Sold: <span style={{color:"var(--red-l)",fontWeight:500}}>{soldCount[t]||0}</span></div>
+                      {gs.distributor_team === t && <div style={{color:"var(--red-l)",fontSize:"0.8rem",marginTop:"0.25rem"}}>▲ DISTRIBUTOR TEAM</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button className="btn btn-gold w-full" onClick={()=>setShowStats(false)}>Close</button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
