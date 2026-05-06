@@ -247,36 +247,44 @@ export default function App() {
     let updates = { hands: newHands, current_trick: newTrick, log: log.slice(-20), updated_at: new Date().toISOString() };
 
     if (newTrick.length === 4) {
-      const winner = whoWinsTrick(newTrick, gs.trump_suit);
-      const winTeam = seatTeam(winner);
-      const winPName = roomPlayers.find(p => p.seat === winner)?.player_name || `Seat ${winner + 1}`;
-      const pile = typeof gs.trick_pile === "string" ? JSON.parse(gs.trick_pile) : (gs.trick_pile || []);
-      const newPile = [...pile, ...newTrick];
-      const prevOwner = gs.pile_owner_seat;
-      let secured = typeof gs.secured_tricks === "string" ? JSON.parse(gs.secured_tricks) : (gs.secured_tricks || { "02": 0, "13": 0 });
-      
-      if (prevOwner === winner) {
-        const tricksInPile = Math.floor(newPile.length / 4);
-        secured = { ...secured, [winTeam]: (secured[winTeam] || 0) + tricksInPile };
-        log.push(`★ ${winPName} secures ${tricksInPile} trick(s)!`);
-        updates.trick_pile = []; updates.pile_owner_seat = null; updates.consecutive_wins = 0;
-      } else {
-        updates.trick_pile = newPile; updates.pile_owner_seat = winner; updates.consecutive_wins = 1;
-        log.push(`${winPName} wins trick (pile grows)`);
-      }
-      updates.secured_tricks = secured; updates.current_trick = []; updates.last_trick_winner = winner; updates.log = log.slice(-20);
+      updates.phase = "resolving_trick";
+      await supabase.from("game_state").update(updates).eq("room_id", roomId);
 
-      const totalSecured = (secured["02"] || 0) + (secured["13"] || 0);
-      const pileLeft = updates.trick_pile ? Math.floor(updates.trick_pile.length / 4) : 0;
-      if (totalSecured + pileLeft >= 13 || Object.values(newHands).every(h => h.length === 0)) {
-        updates = await resolveRoundEnd(updates, secured, newPile.length > 0 && !updates.trick_pile?.length === false ? newPile : [], log);
-      } else {
-        updates.current_turn_seat = winner; updates.phase = "playing";
-      }
+      setTimeout(async () => {
+        const winner = whoWinsTrick(newTrick, gs.trump_suit);
+        const winTeam = seatTeam(winner);
+        const winPName = roomPlayers.find(p => p.seat === winner)?.player_name || `Seat ${winner + 1}`;
+        const pile = typeof gs.trick_pile === "string" ? JSON.parse(gs.trick_pile) : (gs.trick_pile || []);
+        const newPile = [...pile, ...newTrick];
+        const prevOwner = gs.pile_owner_seat;
+        let secured = typeof gs.secured_tricks === "string" ? JSON.parse(gs.secured_tricks) : (gs.secured_tricks || { "02": 0, "13": 0 });
+        
+        let finalUpdates = { current_trick: [], last_trick_winner: winner };
+        
+        if (prevOwner === winner) {
+          const tricksInPile = Math.floor(newPile.length / 4);
+          secured = { ...secured, [winTeam]: (secured[winTeam] || 0) + tricksInPile };
+          log.push(`★ ${winPName} secures ${tricksInPile} trick(s)!`);
+          finalUpdates.trick_pile = []; finalUpdates.pile_owner_seat = null; finalUpdates.consecutive_wins = 0;
+        } else {
+          finalUpdates.trick_pile = newPile; finalUpdates.pile_owner_seat = winner; finalUpdates.consecutive_wins = 1;
+          log.push(`${winPName} wins trick (pile grows)`);
+        }
+        finalUpdates.secured_tricks = secured; finalUpdates.log = log.slice(-20);
+
+        const totalSecured = (secured["02"] || 0) + (secured["13"] || 0);
+        const pileLeft = finalUpdates.trick_pile ? Math.floor(finalUpdates.trick_pile.length / 4) : 0;
+        if (totalSecured + pileLeft >= 13 || Object.values(newHands).every(h => h.length === 0)) {
+          finalUpdates = await resolveRoundEnd(finalUpdates, secured, newPile.length > 0 && (!finalUpdates.trick_pile || finalUpdates.trick_pile.length === 0) ? newPile : [], log);
+        } else {
+          finalUpdates.current_turn_seat = winner; finalUpdates.phase = "playing";
+        }
+        await supabase.from("game_state").update(finalUpdates).eq("room_id", roomId);
+      }, 1500);
     } else {
       updates.current_turn_seat = (mySeat + 1) % 4;
+      await supabase.from("game_state").update(updates).eq("room_id", roomId);
     }
-    await supabase.from("game_state").update(updates).eq("room_id", roomId);
   };
 
   const resolveRoundEnd = async (updates, secured, remainingPile, log) => {

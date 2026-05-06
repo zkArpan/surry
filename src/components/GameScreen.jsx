@@ -14,6 +14,27 @@ export default function GameScreen({
   const [isMicMuted, setIsMicMuted] = useState(true);
   const [isSpeakerMuted, setIsSpeakerMuted] = useState(true);
 
+  const [displayTrick, setDisplayTrick] = useState(trick);
+  const [displayPile, setDisplayPile] = useState(pile);
+  const [slideOutWinner, setSlideOutWinner] = useState(null);
+
+  useEffect(() => {
+    if (pile.length === 0 && displayPile.length > 0 && trick.length === 0) {
+      setSlideOutWinner(gs.last_trick_winner);
+      const t = setTimeout(() => {
+        setDisplayTrick([]);
+        setDisplayPile([]);
+        setSlideOutWinner(null);
+      }, 500);
+      return () => clearTimeout(t);
+    } else {
+      if (slideOutWinner === null) {
+        setDisplayTrick(trick);
+        setDisplayPile(pile);
+      }
+    }
+  }, [trick, pile, gs.last_trick_winner]);
+
   useEffect(() => {
     const myPlayer = roomPlayers?.find(p => p.seat === mySeat);
     if (gs?.id && myPlayer?.user_id) {
@@ -141,8 +162,8 @@ export default function GameScreen({
 
   // ── pile cards display ──────────────────────────────────────────────────
   const PileDisplay = () => {
-    if (!pile || pile.length === 0) return null;
-    const lastTricks = (pile || []).slice(-4);
+    if (!displayPile || displayPile.length === 0) return null;
+    const lastTricks = (displayPile || []).slice(-4);
     return (
       <div className="relative" style={{ width: 220, height: 220 }}>
         {lastTricks.map((play, idx) => {
@@ -152,10 +173,23 @@ export default function GameScreen({
           const rank = play.card.slice(0, -1);
           const suit = play.card.slice(-1);
           const red = ["♥", "♦"].includes(suit);
+
+          let exitX = "0px", exitY = "0px";
+          if (slideOutWinner === topSeat) exitY = "-40vh";
+          else if (slideOutWinner === leftSeat) exitX = "-40vw";
+          else if (slideOutWinner === rightSeat) exitX = "40vw";
+          else if (slideOutWinner === mySeat) exitY = "40vh";
+          const isSliding = slideOutWinner !== null;
+
           return (
-            <div key={`pile-${play.seat}-${play.card}-${idx}`} className="absolute" style={{
+            <div key={`pile-${play.seat}-${play.card}-${idx}`} className={`absolute ${isSliding ? "animate-slide-out" : ""}`} style={{
               left: "50%", top: "50%",
-              transform: `translate(calc(-50% + ${xOff}px), calc(-50% + ${yOff}px)) rotate(${rot}deg)`,
+              "--start-x": `${xOff}px`,
+              "--start-y": `${yOff}px`,
+              "--start-rot": `${rot}deg`,
+              "--exit-x": exitX,
+              "--exit-y": exitY,
+              transform: isSliding ? undefined : `translate(calc(-50% + ${xOff}px), calc(-50% + ${yOff}px)) rotate(${rot}deg)`,
               zIndex: idx,
               filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.4))",
             }}>
@@ -182,7 +216,7 @@ export default function GameScreen({
 
   // ── center trick cards in + pattern by player position ──────────────────
   const CenterTrick = () => {
-    if (!trick || trick.length === 0) return null;
+    if (!displayTrick || displayTrick.length === 0) return null;
     
     // Map each seat to its position in the + pattern
     const getPositionBySeat = (seat) => {
@@ -195,15 +229,38 @@ export default function GameScreen({
     
     return (
       <div className="relative" style={{ width: 220, height: 220 }}>
-        {trick.map((play, idx) => {
+        {displayTrick.map((play, idx) => {
           const pos = getPositionBySeat(play.seat);
           const rank = play.card.slice(0, -1);
           const suit = play.card.slice(-1);
           const red = ["♥", "♦"].includes(suit);
+
+          let startX = "0px";
+          let startY = "0px";
+          if (play.seat === topSeat) { startY = "-40vh"; }
+          else if (play.seat === leftSeat) { startX = "-40vw"; }
+          else if (play.seat === rightSeat) { startX = "40vw"; }
+          else if (play.seat === mySeat) { startY = "40vh"; }
+
+          let exitX = "0px", exitY = "0px";
+          if (slideOutWinner === topSeat) exitY = "-40vh";
+          else if (slideOutWinner === leftSeat) exitX = "-40vw";
+          else if (slideOutWinner === rightSeat) exitX = "40vw";
+          else if (slideOutWinner === mySeat) exitY = "40vh";
+          const isSliding = slideOutWinner !== null;
+
           return (
-            <div key={`${play.seat}-${play.card}`} className="absolute" style={{
+            <div key={`${play.seat}-${play.card}`} className={`absolute ${isSliding ? "animate-slide-out" : "animate-card-play"}`} style={{
               left: "50%", top: "50%",
-              transform: `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px)) rotate(${pos.rot}deg)`,
+              "--start-x": isSliding ? `${pos.x}px` : startX,
+              "--start-y": isSliding ? `${pos.y}px` : startY,
+              "--start-rot": `${pos.rot}deg`,
+              "--end-x": `${pos.x}px`,
+              "--end-y": `${pos.y}px`,
+              "--end-rot": `${pos.rot}deg`,
+              "--exit-x": exitX,
+              "--exit-y": exitY,
+              transform: isSliding ? undefined : `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px)) rotate(${pos.rot}deg)`,
               zIndex: idx + 10,
               filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.55))",
             }}>
@@ -356,7 +413,7 @@ export default function GameScreen({
 
       {/* ── TOP CENTER: TOP OPPONENT AVATAR & NAME ── */}
       <div className="absolute top-0 left-1/2 z-50" style={{ transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-        <AvatarOnly p={topP} seat={topSeat} size={48} />
+        {AvatarOnly({ p: topP, seat: topSeat, size: 48 })}
         <div style={{ fontSize: 10, color: "#f0e6cc", fontFamily: "sans-serif", fontWeight: 600, whiteSpace: "nowrap" }}>
           {topP?.player_name || "—"}
         </div>
@@ -402,14 +459,14 @@ export default function GameScreen({
         <div style={{ fontSize: 10, color: "#f0e6cc", fontFamily: "sans-serif", fontWeight: 600, whiteSpace: "nowrap" }}>
           {leftP?.player_name || "—"}
         </div>
-        <AvatarOnly p={leftP} seat={leftSeat} size={56} />
+        {AvatarOnly({ p: leftP, seat: leftSeat, size: 56 })}
       </div>
 
       {/* ── RIGHT OPPONENT ── */}
       <div className="absolute" style={{
         top: "50%", right: 12, transform: "translateY(-50%)", zIndex: 30, display: "flex", alignItems: "center", gap: 6,
       }}>
-        <AvatarOnly p={rightP} seat={rightSeat} size={56} />
+        {AvatarOnly({ p: rightP, seat: rightSeat, size: 56 })}
         <div style={{ fontSize: 10, color: "#f0e6cc", fontFamily: "sans-serif", fontWeight: 600, whiteSpace: "nowrap" }}>
           {rightP?.player_name || "—"}
         </div>
@@ -421,12 +478,12 @@ export default function GameScreen({
       }}>
         {/* Pile cards (lower z-index, rendered behind) */}
         <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", zIndex: 5 }}>
-          <PileDisplay />
+          {PileDisplay()}
         </div>
         
         {/* Played cards (higher z-index, rendered on top) */}
         <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", zIndex: 15 }}>
-          <CenterTrick />
+          {CenterTrick()}
         </div>
       </div>
 
@@ -446,7 +503,7 @@ export default function GameScreen({
       <div className="absolute" style={{
         bottom: -20, left: "50%", transform: "translateX(-50%)", zIndex: 30,
       }}>
-        <MyHand />
+        {MyHand()}
       </div>
 
       {/* ── PLAY BUTTON ── */}

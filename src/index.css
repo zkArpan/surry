@@ -51,6 +51,36 @@
   transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
+@keyframes cardPlayAnim {
+  0% {
+    transform: translate(calc(-50% + var(--start-x)), calc(-50% + var(--start-y))) rotate(0deg) scale(0.4);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--end-x)), calc(-50% + var(--end-y))) rotate(var(--end-rot)) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-card-play {
+  animation: cardPlayAnim 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes slideOutAnim {
+  0% {
+    transform: translate(calc(-50% + var(--start-x)), calc(-50% + var(--start-y))) rotate(var(--start-rot)) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--exit-x)), calc(-50% + var(--exit-y))) rotate(0deg) scale(0.2);
+    opacity: 0;
+  }
+}
+
+.animate-slide-out {
+  animation: slideOutAnim 0.5s ease-in forwards !important;
+}
+
 @media screen and (orientation: portrait) and (max-width: 768px) {
   .mobile-landscape-force {
     position: fixed !important;
