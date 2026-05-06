@@ -187,8 +187,8 @@ export default function GameScreen({
     // Map each seat to its position in the + pattern
     const getPositionBySeat = (seat) => {
       if (seat === topSeat) return { x: 0, y: -85, rot: 0 };      // top
-      if (seat === leftSeat) return { x: -85, y: 0, rot: 0 };     // left
-      if (seat === rightSeat) return { x: 85, y: 0, rot: 0 };     // right
+      if (seat === leftSeat) return { x: -85, y: 0, rot: 90 };    // left
+      if (seat === rightSeat) return { x: 85, y: 0, rot: -90 };   // right
       if (seat === mySeat) return { x: 0, y: 85, rot: 0 };        // bottom
       return { x: 0, y: 0, rot: 0 };
     };
@@ -307,7 +307,7 @@ export default function GameScreen({
       }} />
 
       {/* ── TOP LEFT: CLOSE BUTTON WITH TRUMP, BID & ROUND ── */}
-      <div className="absolute top-4 left-4 z-50 flex items-center gap-3">
+      <div className="absolute top-4 left-4 z-50 flex items-center gap-1.5">
         <button
           onClick={() => setShowExitConfirm(true)}
           style={{
@@ -325,7 +325,7 @@ export default function GameScreen({
 
         {/* Round number */}
         <div style={{
-          padding: "6px 10px", borderRadius: 6,
+          padding: "4px 8px", borderRadius: 6,
           background: "rgba(15,8,2,0.85)", border: "1px solid rgba(255,255,255,0.14)",
           color: "#f0e6cc", fontSize: 10, fontFamily: "sans-serif", fontWeight: 600
         }}>
@@ -334,7 +334,7 @@ export default function GameScreen({
 
         {/* Bid */}
         <div style={{
-          padding: "6px 10px", borderRadius: 6,
+          padding: "4px 8px", borderRadius: 6,
           background: "rgba(15,8,2,0.85)", border: "1px solid rgba(255,255,255,0.14)",
           color: "#f0e6cc", fontSize: 10, fontFamily: "sans-serif", fontWeight: 600
         }}>
@@ -344,7 +344,7 @@ export default function GameScreen({
 
         {/* Trump */}
         <div style={{
-          padding: "6px 10px", borderRadius: 6,
+          padding: "4px 8px", borderRadius: 6,
           background: "rgba(15,8,2,0.85)", border: "1px solid rgba(255,255,255,0.14)",
           color: "#f0e6cc", fontSize: 10, fontFamily: "sans-serif", fontWeight: 600
         }}>
