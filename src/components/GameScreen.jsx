@@ -31,8 +31,6 @@ export default function GameScreen({
   const topOpp = opponents.find(o => o.relSeat === 2);
   const leftOpp = opponents.find(o => o.relSeat === 3);
 
-  const secured = typeof gs.secured_tricks === "string" ? JSON.parse(gs.secured_tricks) : (gs.secured_tricks || { "02": 0, "13": 0 });
-
   const Avatar = ({ name, active }) => (
     <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-serif font-bold ${active ? 'ring-2 ring-surry-gold shadow-[0_0_15px_rgba(201,168,76,0.5)]' : 'ring-1 ring-white/10'} bg-surry-bg text-surry-cream z-20`}>
       {name ? name.charAt(0).toUpperCase() : '?'}
@@ -64,15 +62,15 @@ export default function GameScreen({
 
   const MyFan = () => {
     return (
-      <div className="relative flex justify-center items-end h-[80px] md:h-[100px] mb-8 w-full max-w-[100vw] overflow-visible">
+      <div className="relative flex justify-center items-end h-[100px] mb-8">
         {myHand.map((card, i) => {
           const isPlayable = gs.phase === "playing" ? playable.includes(card) : false;
           const isSelected = selectedCard === card;
           const size = myHand.length;
-          // Fan math wide
-          const rotation = (i - (size - 1) / 2) * 3;
-          const xOffset = (i - (size - 1) / 2) * 35;
-          const yOffset = Math.pow(Math.abs(i - (size - 1) / 2), 1.5) * 2;
+          // Fan math
+          const rotation = (i - (size - 1) / 2) * 4;
+          const xOffset = (i - (size - 1) / 2) * 25;
+          const yOffset = Math.abs(i - (size - 1) / 2) * 3;
           const activeOffset = isSelected ? -20 : 0;
 
           return (
@@ -105,7 +103,7 @@ export default function GameScreen({
     <div className="h-screen w-full flex flex-col bg-surry-bg text-surry-cream font-sans overflow-hidden">
 
       {/* HEADER */}
-      <header className="hidden md:flex h-16 shrink-0 border-b border-surry-border px-6 items-center justify-between text-[0.8rem]">
+      <header className="h-16 shrink-0 border-b border-surry-border px-6 flex items-center justify-between">
         <div className="flex items-center gap-2 text-surry-gold font-serif text-2xl tracking-[2px] font-bold">
           <span className="text-[1.2em] leading-none">♠</span> SURRY
         </div>
@@ -134,7 +132,7 @@ export default function GameScreen({
 
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-surry-border bg-surry-bg2 text-[0.75rem]">
-            <span>👥 {roomPlayers.length}/4</span>
+            <span>👥 {roomPlayers.length} / 4</span>
             <span className={`w-2 h-2 rounded-full ${roomPlayers.length === 4 ? 'bg-green-500' : 'bg-surry-gold animate-pulse'}`}></span>
           </div>
           <button className="text-surry-cream-d hover:text-white" onClick={() => setShowStats(true)}>📊</button>
@@ -142,44 +140,25 @@ export default function GameScreen({
       </header>
 
       {/* MAIN CONTENT */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex overflow-hidden">
 
         {/* LEFT: TABLE AREA */}
-        <div className="flex-1 flex items-center justify-center p-0 md:p-8 relative">
+        <div className="flex-1 flex items-center justify-center p-8 relative">
 
           {/* Action Buttons top left */}
-          <button className="hidden md:flex absolute top-6 left-6 items-center gap-2 px-4 py-2 rounded-lg bg-surry-bg2 border border-surry-border text-[0.8rem] text-surry-cream-d hover:text-white transition-colors">
+          <button className="absolute top-6 left-6 flex items-center gap-2 px-4 py-2 rounded-lg bg-surry-bg2 border border-surry-border text-[0.8rem] text-surry-cream-d hover:text-white transition-colors">
             <span>ℹ️</span> Rules
           </button>
 
           {/* TABLE */}
-          <div className="w-full h-full md:h-auto md:max-w-[1200px] md:aspect-[16/9] md:max-h-[80vh] relative rounded-none md:rounded-[140px] border-none md:border-[16px] border-surry-table-border bg-gradient-to-br from-[#805020] to-[#5C3A21] md:bg-surry-green-dark shadow-[inset_0_0_120px_rgba(0,0,0,0.8),0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-center overflow-hidden md:overflow-visible">
-
-            {/* Mobile Top Floating UI */}
-            <button className="md:hidden absolute top-4 left-4 w-10 h-10 bg-black/60 rounded-full flex items-center justify-center text-white text-[1.2rem] z-50 shadow-lg border border-white/10" onClick={() => setShowStats(true)}>🏆</button>
-            <button className="md:hidden absolute top-4 right-4 w-10 h-10 bg-black/60 rounded-full flex items-center justify-center text-white text-[1.2rem] z-50 shadow-lg border border-white/10" onClick={() => setShowStats(true)}>⚙️</button>
-            
-            <div className="md:hidden absolute top-4 left-1/2 -translate-x-1/2 bg-black/80 rounded-full px-5 py-2 flex items-center gap-3 text-[0.65rem] whitespace-nowrap z-50 shadow-lg border border-white/10">
-              <span className="text-white">Round {gs.round_number || 1}</span>
-              <span className="opacity-50 text-white">|</span>
-              {gs.trump_suit ? (
-                <span className="text-white">Trump <span className={["♥", "♦"].includes(trumpSymbol) ? "text-surry-red font-bold" : "text-white font-bold"}>{trumpSymbol} {gs.trump_suit}</span></span>
-              ) : (
-                <span className="text-white opacity-50">No Trump</span>
-              )}
-              <span className="opacity-50 text-white">|</span>
-              <span className="text-white">Bid <span className="text-surry-gold font-bold">{gs.winning_bid || "-"}</span> by {getPlayerAt(gs.bid_winner_seat)?.player_name?.split(" ")[0] || "?"}</span>
-            </div>
+          <div className="w-full max-w-[1200px] aspect-[16/9] max-h-[80vh] relative rounded-[140px] border-[16px] border-surry-table-border bg-surry-green-dark shadow-[inset_0_0_120px_rgba(0,0,0,0.8),0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-center">
 
             {/* Center Area */}
-            <div className="absolute top-[45%] md:top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center">
               <TrickDisplay trick={trick} mySeat={mySeat} roomPlayers={roomPlayers} />
 
-              <div className="mt-[80px] md:mt-[110px] flex flex-col items-center gap-2">
+              <div className="mt-[110px] flex flex-col items-center gap-2">
                 <PileStack pile={pile} />
-                <div className="md:hidden bg-black/80 rounded-full px-4 py-1 text-[0.7rem] text-surry-gold shadow-lg tracking-[1px] mt-2 border border-white/10">
-                  Pile: {Math.floor(pile.length / 4)}
-                </div>
                 {gs.consecutive_wins > 0 && gs.pile_owner_seat !== null && (
                   <div className="px-6 py-1 rounded-full border border-surry-gold/60 bg-black/60 backdrop-blur-sm text-[0.7rem] flex flex-col items-center gap-0.5 mt-1">
                     <span className="text-[0.55rem] text-surry-gold tracking-[2px]">CURRENT STREAK</span>
@@ -191,48 +170,39 @@ export default function GameScreen({
 
             {/* Top Opponent */}
             {topOpp.p && (
-              <div className="absolute top-20 md:top-8 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                <div className="bg-black/80 rounded-full px-4 py-1 text-[0.65rem] md:text-[0.8rem] mb-[-10px] z-30 flex items-center gap-2 shadow-lg border border-white/10">
-                  <span className="text-white font-medium">{topOpp.p.player_name}</span>
-                  <span className="text-surry-green-l font-bold">{secured[seatTeam(topOpp.seat)] || 0}/13</span>
+              <div className="absolute top-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+                <div className="flex flex-col items-center gap-1">
+                  <Avatar name={topOpp.p.player_name} active={topOpp.isActive} />
+                  <div className="text-[0.8rem] font-medium">{topOpp.p.player_name}</div>
                 </div>
-                <div className="relative flex justify-center items-center mt-2">
+                <div className="mt-1">
                   <OpponentFan size={topOpp.size} position="top" />
-                  <div className="absolute z-20">
-                    <Avatar name={topOpp.p.player_name} active={topOpp.isActive} />
-                  </div>
                 </div>
               </div>
             )}
 
             {/* Left Opponent */}
             {leftOpp.p && (
-              <div className="absolute left-2 md:left-8 top-1/2 -translate-y-1/2 flex flex-col items-center gap-2">
-                <div className="bg-black/80 rounded-full px-3 py-1 text-[0.65rem] md:text-[0.8rem] z-30 flex flex-col items-center shadow-lg border border-white/10 order-2 mt-[-10px]">
-                  <span className="text-white font-medium">{leftOpp.p.player_name}</span>
-                  <span className="text-surry-green-l font-bold">{secured[seatTeam(leftOpp.seat)] || 0}/13</span>
+              <div className="absolute left-8 top-1/2 -translate-y-1/2 flex items-center gap-6">
+                <div className="flex flex-col items-center gap-1">
+                  <Avatar name={leftOpp.p.player_name} active={leftOpp.isActive} />
+                  <div className="text-[0.8rem] font-medium">{leftOpp.p.player_name}</div>
                 </div>
-                <div className="relative flex justify-center items-center order-1">
+                <div>
                   <OpponentFan size={leftOpp.size} position="left" />
-                  <div className="absolute z-20">
-                    <Avatar name={leftOpp.p.player_name} active={leftOpp.isActive} />
-                  </div>
                 </div>
               </div>
             )}
 
             {/* Right Opponent */}
             {rightOpp.p && (
-              <div className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 flex flex-col items-center gap-2">
-                <div className="bg-black/80 rounded-full px-3 py-1 text-[0.65rem] md:text-[0.8rem] z-30 flex flex-col items-center shadow-lg border border-white/10 order-2 mt-[-10px]">
-                  <span className="text-white font-medium">{rightOpp.p.player_name}</span>
-                  <span className="text-surry-green-l font-bold">{secured[seatTeam(rightOpp.seat)] || 0}/13</span>
+              <div className="absolute right-8 top-1/2 -translate-y-1/2 flex items-center gap-6 flex-row-reverse">
+                <div className="flex flex-col items-center gap-1">
+                  <Avatar name={rightOpp.p.player_name} active={rightOpp.isActive} />
+                  <div className="text-[0.8rem] font-medium">{rightOpp.p.player_name}</div>
                 </div>
-                <div className="relative flex justify-center items-center order-1">
+                <div>
                   <OpponentFan size={rightOpp.size} position="right" />
-                  <div className="absolute z-20">
-                    <Avatar name={rightOpp.p.player_name} active={rightOpp.isActive} />
-                  </div>
                 </div>
               </div>
             )}
@@ -261,19 +231,11 @@ export default function GameScreen({
               </div>
             )}
 
-            {/* Leave Table Button (Mobile only) */}
-            <button 
-              className="md:hidden absolute bottom-4 right-4 flex items-center gap-1 px-3 py-1.5 bg-black/40 hover:bg-surry-red/80 text-surry-cream-d hover:text-white rounded-full border border-white/10 text-[0.65rem] transition-colors z-40 backdrop-blur-sm"
-              onClick={() => setShowExitConfirm(true)}
-            >
-              <span>🚪</span> Leave Table
-            </button>
-
           </div>
         </div>
 
         {/* RIGHT: SIDEBAR */}
-        <div className="hidden lg:flex w-[320px] shrink-0 border-l border-surry-border bg-surry-bg2 flex-col">
+        <div className="w-[320px] shrink-0 border-l border-surry-border bg-surry-bg2 flex flex-col">
           <div className="h-16 px-6 flex items-center justify-between border-b border-surry-border text-[0.9rem]">
             <span>Live Feed</span>
             <button className="text-surry-cream-d">^</button>
@@ -307,7 +269,7 @@ export default function GameScreen({
       </div>
 
       {/* FOOTER */}
-      <footer className="hidden md:flex h-14 shrink-0 border-t border-surry-border px-6 items-center justify-between bg-surry-bg text-[0.8rem]">
+      <footer className="h-14 shrink-0 border-t border-surry-border px-6 flex items-center justify-between bg-surry-bg text-[0.8rem]">
         <div className="flex items-center gap-4 text-surry-green-ll">
           <span>🔊</span>
           <span>🎤</span>
@@ -388,13 +350,6 @@ export default function GameScreen({
           {error}
         </div>
       )}
-
-      {/* Portrait warning overlay */}
-      <div className="hidden portrait:flex fixed inset-0 bg-surry-bg z-[500] flex-col items-center justify-center text-center p-8 md:portrait:hidden">
-        <div className="text-4xl mb-4 text-surry-gold">📱🔄</div>
-        <div className="font-serif text-2xl text-surry-gold mb-2">Rotate Device</div>
-        <div className="text-surry-cream-d text-sm">Surry requires horizontal mode for the best experience. Please rotate your phone to landscape.</div>
-      </div>
     </div>
   );
 }
