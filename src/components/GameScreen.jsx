@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react";
 import { seatTeam } from "../lib/gameLogic";
+import { webrtc } from "../lib/webrtc";
 
 const SUITS = ["♠", "♥", "♦", "♣"];
 const SUIT_NAMES = { "♠": "spades", "♥": "hearts", "♦": "diamonds", "♣": "clubs" };
@@ -9,6 +11,27 @@ export default function GameScreen({
   selectedCard, setSelectedCard, playCard, placeBid, selectTrump,
   setShowStats, setShowExitConfirm, error
 }) {
+  const [isMicMuted, setIsMicMuted] = useState(true);
+  const [isSpeakerMuted, setIsSpeakerMuted] = useState(true);
+
+  useEffect(() => {
+    const myPlayer = roomPlayers?.find(p => p.seat === mySeat);
+    if (gs?.id && myPlayer?.user_id) {
+      webrtc.joinVoice(gs.id, myPlayer.user_id).then(() => {
+        webrtc.toggleMic(true);
+        webrtc.toggleSpeaker(true);
+        setIsMicMuted(true);
+        setIsSpeakerMuted(true);
+      }).catch(err => console.error("Voice chat init failed", err));
+    }
+    return () => {
+      webrtc.leaveVoice();
+    };
+  }, [gs?.id, roomPlayers, mySeat]);
+
+  const toggleMic = async () => setIsMicMuted(await webrtc.toggleMic());
+  const toggleSpeaker = () => setIsSpeakerMuted(webrtc.toggleSpeaker());
+
   const getHandSize = (seat) => {
     const h = typeof gs.hands === "string" ? JSON.parse(gs.hands) : (gs.hands || {});
     return (h[seat] || h[String(seat)] || []).length;
@@ -304,15 +327,37 @@ export default function GameScreen({
           </div>
         </div>
 
-        <button
-          onClick={() => setShowExitConfirm(true)}
-          style={{
-            width: 38, height: 38, borderRadius: "50%", fontSize: 18,
-            background: "rgba(15,8,2,0.72)", border: "1px solid rgba(255,255,255,0.14)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer",
-          }}
-        >🚪</button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggleMic}
+            style={{
+              width: 38, height: 38, borderRadius: "50%", fontSize: 18,
+              background: isMicMuted ? "rgba(150,30,30,0.8)" : "rgba(15,8,2,0.72)",
+              border: "1px solid rgba(255,255,255,0.14)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer",
+            }}
+          >{isMicMuted ? "🔇" : "🎤"}</button>
+          <button
+            onClick={toggleSpeaker}
+            style={{
+              width: 38, height: 38, borderRadius: "50%", fontSize: 18,
+              background: isSpeakerMuted ? "rgba(150,30,30,0.8)" : "rgba(15,8,2,0.72)",
+              border: "1px solid rgba(255,255,255,0.14)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer",
+            }}
+          >{isSpeakerMuted ? "🔈" : "🔊"}</button>
+          <button
+            onClick={() => setShowExitConfirm(true)}
+            style={{
+              width: 38, height: 38, borderRadius: "50%", fontSize: 18,
+              background: "rgba(15,8,2,0.72)", border: "1px solid rgba(255,255,255,0.14)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer",
+            }}
+          >🚪</button>
+        </div>
       </div>
 
       {/* ── TOP OPPONENT ── */}
