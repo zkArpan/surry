@@ -425,7 +425,7 @@ export default function App() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_center,_#1a472a_0%,_#0d2b18_100%)]">
-      {(screen === "home" || screen === "create") && (
+      {(screen === "home" || screen === "create" || screen === "join") && (
         <LobbyScreen 
           screen={screen} 
           playerName={playerName} 

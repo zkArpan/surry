@@ -103,55 +103,58 @@ export default function GameScreen({
     <div className="h-screen w-full flex flex-col bg-surry-bg text-surry-cream font-sans overflow-hidden">
 
       {/* HEADER */}
-      <header className="h-16 shrink-0 border-b border-surry-border px-6 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-surry-gold font-serif text-2xl tracking-[2px] font-bold">
+      <header className="h-10 md:h-16 shrink-0 border-b border-surry-border px-2 md:px-6 flex items-center justify-between text-[0.7rem] md:text-[0.8rem]">
+        <div className="hidden md:flex items-center gap-2 text-surry-gold font-serif text-2xl tracking-[2px] font-bold">
           <span className="text-[1.2em] leading-none">♠</span> SURRY
         </div>
 
-        <div className="flex items-center gap-4 text-[0.75rem]">
-          <div className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-surry-border bg-surry-bg2">
-            <span className="text-surry-cream-d">Round</span>
+        <div className="flex items-center gap-2 md:gap-4 text-[0.65rem] md:text-[0.75rem]">
+          <div className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-1 md:py-1.5 rounded-full border border-surry-border bg-surry-bg2">
+            <span className="text-surry-cream-d hidden md:inline">Round</span>
+            <span className="text-surry-cream-d md:hidden">R</span>
             <span className="font-medium">{gs.round_number || 1}</span>
           </div>
           {gs.trump_suit && (
-            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-surry-border bg-surry-bg2">
-              <span className="text-surry-cream-d">Trump</span>
+            <div className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-1 md:py-1.5 rounded-full border border-surry-border bg-surry-bg2">
+              <span className="text-surry-cream-d hidden md:inline">Trump</span>
               <span className={["♥", "♦"].includes(trumpSymbol) ? "text-surry-red" : "text-surry-cream"}>
-                {trumpSymbol} {gs.trump_suit}
+                {trumpSymbol} <span className="hidden md:inline">{gs.trump_suit}</span>
               </span>
             </div>
           )}
           {gs.winning_bid && (
-            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-surry-border bg-surry-bg2">
-              <span className="text-surry-cream-d">Bid</span>
+            <div className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-1 md:py-1.5 rounded-full border border-surry-border bg-surry-bg2">
+              <span className="text-surry-cream-d hidden md:inline">Bid</span>
               <span className="text-surry-gold font-medium">{gs.winning_bid}</span>
-              <span className="text-surry-cream-d">by {getPlayerAt(gs.bid_winner_seat)?.player_name || "?"}</span>
+              <span className="text-surry-cream-d truncate max-w-[50px] md:max-w-none">
+                <span className="hidden md:inline">by </span>{getPlayerAt(gs.bid_winner_seat)?.player_name || "?"}
+              </span>
             </div>
           )}
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-surry-border bg-surry-bg2 text-[0.75rem]">
-            <span>👥 {roomPlayers.length} / 4</span>
-            <span className={`w-2 h-2 rounded-full ${roomPlayers.length === 4 ? 'bg-green-500' : 'bg-surry-gold animate-pulse'}`}></span>
+        <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-1 md:py-1.5 rounded-full border border-surry-border bg-surry-bg2 text-[0.65rem] md:text-[0.75rem]">
+            <span>👥 {roomPlayers.length}/4</span>
+            <span className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${roomPlayers.length === 4 ? 'bg-green-500' : 'bg-surry-gold animate-pulse'}`}></span>
           </div>
           <button className="text-surry-cream-d hover:text-white" onClick={() => setShowStats(true)}>📊</button>
         </div>
       </header>
 
       {/* MAIN CONTENT */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
 
         {/* LEFT: TABLE AREA */}
-        <div className="flex-1 flex items-center justify-center p-8 relative">
+        <div className="flex-1 flex items-center justify-center p-2 md:p-8 relative">
 
           {/* Action Buttons top left */}
-          <button className="absolute top-6 left-6 flex items-center gap-2 px-4 py-2 rounded-lg bg-surry-bg2 border border-surry-border text-[0.8rem] text-surry-cream-d hover:text-white transition-colors">
+          <button className="hidden md:flex absolute top-6 left-6 items-center gap-2 px-4 py-2 rounded-lg bg-surry-bg2 border border-surry-border text-[0.8rem] text-surry-cream-d hover:text-white transition-colors">
             <span>ℹ️</span> Rules
           </button>
 
           {/* TABLE */}
-          <div className="w-full max-w-[1200px] aspect-[16/9] max-h-[80vh] relative rounded-[140px] border-[16px] border-surry-table-border bg-surry-green-dark shadow-[inset_0_0_120px_rgba(0,0,0,0.8),0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-center">
+          <div className="w-full h-full md:h-auto md:max-w-[1200px] md:aspect-[16/9] md:max-h-[80vh] relative rounded-[40px] md:rounded-[140px] border-[8px] md:border-[16px] border-surry-table-border bg-surry-green-dark shadow-[inset_0_0_120px_rgba(0,0,0,0.8),0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-center">
 
             {/* Center Area */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center">
@@ -218,37 +221,7 @@ export default function GameScreen({
               <MyFan />
             </div>
 
-            {/* Play/Bid actions inside table bottom right */}
-            {gs.phase === "bidding" && isMyTurn && (
-              <div className="absolute bottom-8 right-12 bg-black/60 p-4 rounded-xl border border-surry-border backdrop-blur-md z-30">
-                <div className="text-[0.65rem] text-surry-gold mb-2 text-center tracking-widest">PLACE BID</div>
-                <div className="grid grid-cols-3 gap-2">
-                  {validBids.map(b => (
-                    <button
-                      key={b}
-                      className={`h-8 rounded border border-white/10 bg-white/5 hover:border-surry-gold hover:text-surry-gold text-[0.8rem] transition-colors ${b === "pass" ? "col-span-3" : ""}`}
-                      onClick={() => placeBid(b)}
-                    >
-                      {b === "pass" ? "Pass" : b}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {gs.phase === "trump_select" && isMyTurn && gs.bid_winner_seat === mySeat && (
-              <div className="absolute bottom-8 right-12 bg-black/60 p-4 rounded-xl border border-surry-border backdrop-blur-md z-30 flex gap-2">
-                {SUITS.map(s => (
-                  <button
-                    key={s}
-                    className={`w-12 h-12 rounded border border-white/10 bg-white/5 hover:border-surry-gold hover:scale-110 transition-all ${["♥", "♦"].includes(s) ? "text-surry-red" : "text-surry-cream"} text-2xl flex items-center justify-center`}
-                    onClick={() => selectTrump(SUIT_NAMES[s])}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
 
             {gs.phase === "playing" && isMyTurn && selectedCard && (
               <div className="absolute bottom-12 right-12 z-30">
@@ -261,11 +234,19 @@ export default function GameScreen({
               </div>
             )}
 
+            {/* Leave Table Button (Mobile only) */}
+            <button 
+              className="md:hidden absolute bottom-4 right-4 flex items-center gap-1 px-3 py-1.5 bg-black/40 hover:bg-surry-red/80 text-surry-cream-d hover:text-white rounded-full border border-white/10 text-[0.65rem] transition-colors z-40 backdrop-blur-sm"
+              onClick={() => setShowExitConfirm(true)}
+            >
+              <span>🚪</span> Leave Table
+            </button>
+
           </div>
         </div>
 
         {/* RIGHT: SIDEBAR */}
-        <div className="w-[320px] shrink-0 border-l border-surry-border bg-surry-bg2 flex flex-col">
+        <div className="hidden lg:flex w-[320px] shrink-0 border-l border-surry-border bg-surry-bg2 flex-col">
           <div className="h-16 px-6 flex items-center justify-between border-b border-surry-border text-[0.9rem]">
             <span>Live Feed</span>
             <button className="text-surry-cream-d">^</button>
@@ -299,7 +280,7 @@ export default function GameScreen({
       </div>
 
       {/* FOOTER */}
-      <footer className="h-14 shrink-0 border-t border-surry-border px-6 flex items-center justify-between bg-surry-bg text-[0.8rem]">
+      <footer className="hidden md:flex h-14 shrink-0 border-t border-surry-border px-6 items-center justify-between bg-surry-bg text-[0.8rem]">
         <div className="flex items-center gap-4 text-surry-green-ll">
           <span>🔊</span>
           <span>🎤</span>
@@ -319,11 +300,74 @@ export default function GameScreen({
         </div>
       </footer>
 
+      {/* Modals/Popups */}
+      {gs.phase === "bidding" && isMyTurn && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] backdrop-blur-sm">
+          <div className="bg-surry-bg2 border border-surry-gold rounded-2xl p-8 text-center max-w-[360px] w-[90%] shadow-[0_0_50px_rgba(201,168,76,0.15)]">
+            <div className="font-serif text-[2rem] text-surry-gold mb-2 tracking-[2px]">Your Bid</div>
+            <div className="text-[0.8rem] text-surry-cream-d mb-6 leading-relaxed">
+              Place a bid higher than the current highest, or pass if you cannot.
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {validBids.filter(b => b !== "pass").map(b => (
+                <button
+                  key={b}
+                  className="py-3 rounded-lg border border-surry-border bg-black/40 hover:border-surry-gold hover:bg-surry-gold/10 hover:text-surry-gold text-[1.1rem] font-medium transition-all"
+                  onClick={() => placeBid(b)}
+                >
+                  {b}
+                </button>
+              ))}
+            </div>
+            
+            {validBids.includes("pass") && (
+              <button
+                className="w-full py-3 rounded-lg border border-surry-border bg-black/40 hover:border-surry-red hover:bg-surry-red/10 hover:text-surry-red text-[1.1rem] transition-all mt-2"
+                onClick={() => placeBid("pass")}
+              >
+                Pass
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {gs.phase === "trump_select" && isMyTurn && gs.bid_winner_seat === mySeat && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] backdrop-blur-sm">
+          <div className="bg-surry-bg2 border border-surry-gold rounded-2xl p-8 text-center max-w-[360px] w-[90%] shadow-[0_0_50px_rgba(201,168,76,0.15)]">
+            <div className="font-serif text-[2rem] text-surry-gold mb-2 tracking-[2px]">Select Trump</div>
+            <div className="text-[0.8rem] text-surry-cream-d mb-6 leading-relaxed">
+              Choose the trump suit for this round.
+            </div>
+            
+            <div className="flex gap-4 justify-center">
+              {SUITS.map(s => (
+                <button
+                  key={s}
+                  className={`w-16 h-16 rounded-xl border border-surry-border bg-black/40 hover:border-surry-gold hover:bg-surry-gold/10 hover:scale-110 transition-all ${["♥", "♦"].includes(s) ? "text-surry-red" : "text-surry-cream"} text-3xl flex items-center justify-center shadow-md`}
+                  onClick={() => selectTrump(SUIT_NAMES[s])}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-surry-red text-white px-6 py-3 rounded-lg shadow-xl z-50 animate-bounce">
           {error}
         </div>
       )}
+
+      {/* Portrait warning overlay */}
+      <div className="hidden portrait:flex fixed inset-0 bg-surry-bg z-[500] flex-col items-center justify-center text-center p-8 md:portrait:hidden">
+        <div className="text-4xl mb-4 text-surry-gold">📱🔄</div>
+        <div className="font-serif text-2xl text-surry-gold mb-2">Rotate Device</div>
+        <div className="text-surry-cream-d text-sm">Surry requires horizontal mode for the best experience. Please rotate your phone to landscape.</div>
+      </div>
     </div>
   );
 }
