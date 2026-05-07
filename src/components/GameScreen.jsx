@@ -534,21 +534,7 @@ export default function GameScreen({
             background: "rgba(22,13,5,0.98)", border: "1px solid rgba(201,168,76,0.42)",
             boxShadow: "0 24px 60px rgba(0,0,0,0.7)", fontFamily: "sans-serif",
           }}>
-            {/* Current bid info */}
-            <div style={{
-              textAlign: "center", marginBottom: 14, paddingBottom: 12,
-              borderBottom: "1px solid rgba(201,168,76,0.25)",
-            }}>
-              <div style={{ fontSize: 13, color: "rgba(240,230,204,0.65)", marginBottom: 4 }}>
-                Current Bid
-              </div>
-              <div style={{ fontSize: 20, color: "#c9a84c", fontWeight: 700, marginBottom: 2 }}>
-                {gs.winning_bid || "—"}
-              </div>
-              <div style={{ fontSize: 11, color: "rgba(240,230,204,0.55)" }}>
-                by {getPlayerAt(gs.bid_winner_seat)?.player_name || "—"}
-              </div>
-            </div>
+
 
             <div style={{ fontFamily: "serif", fontSize: 22, color: "#c9a84c", textAlign: "center", marginBottom: 2 }}>
               Your Bid
