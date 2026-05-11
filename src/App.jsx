@@ -53,10 +53,15 @@ export default function App() {
             if (prev && newGs.sold_count) {
               const prevSold = typeof prev.sold_count === "string" ? JSON.parse(prev.sold_count) : prev.sold_count;
               const newSold = typeof newGs.sold_count === "string" ? JSON.parse(newGs.sold_count) : newGs.sold_count;
-              const t02 = (newSold["02"] || 0) - (prevSold["02"] || 0);
-              const t13 = (newSold["13"] || 0) - (prevSold["13"] || 0);
-              if (t02 > 0) setShowSold("Team A SOLD!");
-              if (t13 > 0) setShowSold("Team B SOLD!");
+              // Check if any player got SOLD (increased sold count)
+              for (let seat = 0; seat < 4; seat++) {
+                const seatStr = String(seat);
+                if ((newSold[seatStr] || 0) > (prevSold[seatStr] || 0)) {
+                  const player = roomPlayers?.find(p => p.seat === seat);
+                  setShowSold(`${player?.player_name || "Seat " + seat} SOLD!`);
+                  break;
+                }
+              }
             }
             return newGs;
           });
@@ -165,6 +170,9 @@ export default function App() {
       bid_order: [],
       trump_suit: null,
       last_trick_winner: null,
+      pieces: { "0": 0, "1": 0, "2": 0, "3": 0 },
+      sold_count: { "0": 0, "1": 0, "2": 0, "3": 0 },
+      distributor_seat: 0,
       log: ["Game started! Bidding begins."],
       updated_at: new Date().toISOString()
     }).eq("room_id", roomId);
@@ -288,38 +296,76 @@ export default function App() {
   };
 
   const resolveRoundEnd = async (updates, secured, remainingPile, log) => {
-    const pieces = typeof gs.pieces === "string" ? JSON.parse(gs.pieces) : (gs.pieces || { "02": 0, "13": 0 });
-    const soldCount = typeof gs.sold_count === "string" ? JSON.parse(gs.sold_count) : (gs.sold_count || { "02": 0, "13": 0 });
+    // Per-player piece tracking
+    const pieces = typeof gs.pieces === "string" ? JSON.parse(gs.pieces) : (gs.pieces || { "0": 0, "1": 0, "2": 0, "3": 0 });
+    const soldCount = typeof gs.sold_count === "string" ? JSON.parse(gs.sold_count) : (gs.sold_count || { "0": 0, "1": 0, "2": 0, "3": 0 });
     const bidTeam = seatTeam(gs.bid_winner_seat);
     const bidVal = gs.winning_bid || 8;
     const teamTricks = secured[bidTeam] || 0;
     const newPieces = { ...pieces };
     const newSold = { ...soldCount };
-    let newDistributor = typeof gs.distributor_team === "string" ? gs.distributor_team : "02";
-
+    let distributorSeat = typeof gs.distributor_seat === "number" ? gs.distributor_seat : (gs.distributor_team === "13" ? 1 : 0);
+    const distributorTeam = seatTeam(distributorSeat);
+    
     if (teamTricks === 13) log.push(`★★★ SURRY! ${bidTeam === "02" ? "Team A" : "Team B"} wins ALL 13 tricks!`);
-    if (teamTricks >= bidVal) {
-      const opp = bidTeam === "02" ? "13" : "02";
-      newPieces[opp] = (newPieces[opp] || 0) + teamTricks;
-      log.push(`${bidTeam === "02" ? "Team A" : "Team B"} made their bid! +${teamTricks} pieces to opponents.`);
+    
+    // Piece toll logic:
+    // - If DISTRIBUTOR'S TEAM bid: pieces decrease by bid if they succeeded, increase by 2x bid if they failed
+    // - If OPPOSITE team bid: pieces increase by bid if they succeeded, decrease by 2x bid if they failed
+    const dist = String(distributorSeat);
+    
+    if (bidTeam === distributorTeam) {
+      // Distributor's team is bidding
+      if (teamTricks >= bidVal) {
+        // Success: reduce pieces by bid amount
+        newPieces[dist] = Math.max(0, (newPieces[dist] || 0) - bidVal);
+        log.push(`Distributor's team made their bid! Seat ${distributorSeat} reduces pieces by ${bidVal}.`);
+      } else {
+        // Failed: increase pieces by 2x bid amount
+        const penalty = bidVal * 2;
+        newPieces[dist] = (newPieces[dist] || 0) + penalty;
+        log.push(`Distributor's team failed bid! Seat ${distributorSeat} increases pieces by ${penalty}.`);
+      }
     } else {
-      const penalty = bidVal * 2;
-      newPieces[bidTeam] = (newPieces[bidTeam] || 0) + penalty;
-      log.push(`${bidTeam === "02" ? "Team A" : "Team B"} failed bid! +${penalty} piece penalty.`);
-    }
-
-    for (const t of ["02", "13"]) {
-      if (newPieces[t] > 52) {
-        newSold[t] = (newSold[t] || 0) + 1;
-        newPieces[t] = 0;
-        newDistributor = t === "02" ? "13" : "02";
-        log.push(`SOLD! ${t === "02" ? "Team A" : "Team B"} pieces reset to 0. Times SOLD: ${newSold[t]}`);
+      // Opposite team is bidding
+      if (teamTricks >= bidVal) {
+        // Opposition succeeded: they collect, pieces increase
+        newPieces[dist] = (newPieces[dist] || 0) + bidVal;
+        log.push(`Opposite team made their bid! Seat ${distributorSeat} pieces increase by ${bidVal}.`);
+      } else {
+        // Opposition failed: debt reduces
+        const penalty = bidVal * 2;
+        newPieces[dist] = Math.max(0, (newPieces[dist] || 0) - penalty);
+        log.push(`Opposite team failed bid! Seat ${distributorSeat} pieces reduce by ${penalty}.`);
       }
     }
-    if (newPieces["02"] !== newPieces["13"]) newDistributor = newPieces["02"] > newPieces["13"] ? "02" : "13";
 
-    updates.phase = "round_end"; updates.pieces = newPieces; updates.sold_count = newSold;
-    updates.distributor_team = newDistributor; updates.round_number = (gs.round_number || 1) + 1;
+    // Check for SOLD (individual player reaches 52)
+    for (let seat = 0; seat < 4; seat++) {
+      const seatStr = String(seat);
+      if (newPieces[seatStr] >= 52) {
+        newSold[seatStr] = (newSold[seatStr] || 0) + 1;
+        newPieces[seatStr] = 0;
+        // Transfer distributor to teammate
+        const teammateSeat = (seat + 2) % 4;
+        distributorSeat = teammateSeat;
+        log.push(`SOLD! Seat ${seat} reaches 52 pieces and resets to 0. Distributor shifts to Seat ${teammateSeat}.`);
+      }
+    }
+
+    // If distributor's pieces are 0 and there are pieces elsewhere in their team, transfer to teammate
+    const currentDistTeam = seatTeam(distributorSeat);
+    const currentDistTeammate = (distributorSeat + 2) % 4;
+    if ((newPieces[String(distributorSeat)] || 0) === 0 && (newPieces[String(currentDistTeammate)] || 0) > 0) {
+      distributorSeat = currentDistTeammate;
+      log.push(`Distributor's debt paid off. Role transfers to teammate at Seat ${distributorSeat}.`);
+    }
+
+    updates.phase = "round_end"; 
+    updates.pieces = newPieces; 
+    updates.sold_count = newSold;
+    updates.distributor_seat = distributorSeat; 
+    updates.round_number = (gs.round_number || 1) + 1;
     updates.log = log.slice(-20);
     setShowResult({ secured, bidTeam, bidVal, pieces: newPieces, sold: newSold });
     return updates;
@@ -408,8 +454,8 @@ export default function App() {
   const trick = gs ? (typeof gs.current_trick === "string" ? JSON.parse(gs.current_trick) : (gs.current_trick || [])) : [];
   const pile = gs ? (typeof gs.trick_pile === "string" ? JSON.parse(gs.trick_pile) : (gs.trick_pile || [])) : [];
   const secured = gs ? (typeof gs.secured_tricks === "string" ? JSON.parse(gs.secured_tricks) : (gs.secured_tricks || { "02": 0, "13": 0 })) : { "02": 0, "13": 0 };
-  const pieces = gs ? (typeof gs.pieces === "string" ? JSON.parse(gs.pieces) : (gs.pieces || { "02": 0, "13": 0 })) : { "02": 0, "13": 0 };
-  const soldCount = gs ? (typeof gs.sold_count === "string" ? JSON.parse(gs.sold_count) : (gs.sold_count || { "02": 0, "13": 0 })) : { "02": 0, "13": 0 };
+  const pieces = gs ? (typeof gs.pieces === "string" ? JSON.parse(gs.pieces) : (gs.pieces || { "0": 0, "1": 0, "2": 0, "3": 0 })) : { "0": 0, "1": 0, "2": 0, "3": 0 };
+  const soldCount = gs ? (typeof gs.sold_count === "string" ? JSON.parse(gs.sold_count) : (gs.sold_count || { "0": 0, "1": 0, "2": 0, "3": 0 })) : { "0": 0, "1": 0, "2": 0, "3": 0 };
   const bids = gs ? (typeof gs.bids === "string" ? JSON.parse(gs.bids) : (gs.bids || {})) : {};
   const log = gs ? (typeof gs.log === "string" ? JSON.parse(gs.log) : (gs.log || [])) : [];
   const isMyTurn = gs?.current_turn_seat === mySeat;
@@ -528,29 +574,63 @@ export default function App() {
         </div>
       )}
 
-      {showStats && gs && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100]">
-          <div className="bg-surry-bg2 border border-surry-gold rounded-2xl p-8 text-center max-w-[360px] w-[90%]">
-            <div className="font-serif text-[2rem] text-surry-gold mb-4">Game Stats</div>
-            <div className="mb-6 leading-[2] text-[0.85rem] text-left">
-              {["02", "13"].map(t => (
-                <div key={t} className="mb-4">
-                  <div className={`text-[0.9rem] font-medium mb-2 ${t === "02" ? "text-[#7ec8e3]" : "text-[#f4a261]"}`}>
-                    {t === "02" ? "Team A (seats 1,3)" : "Team B (seats 2,4)"}{t === myTeam ? " • YOU" : ""}
-                  </div>
-                  <div className="pl-4 text-surry-cream-d">
-                    <div>Pieces: <span className="text-surry-gold font-medium">{pieces[t] || 0}</span></div>
-                    <div>Tricks: <span className="text-surry-gold font-medium">{secured[t] || 0}</span></div>
-                    <div>Times Sold: <span className="text-surry-red-l font-medium">{soldCount[t] || 0}</span></div>
-                    {gs.distributor_team === t && <div className="text-surry-red-l text-[0.8rem] mt-1">▲ DISTRIBUTOR TEAM</div>}
+      {showStats && gs && (() => {
+        const logArray = typeof gs.log === "string" ? JSON.parse(gs.log) : (gs.log || []);
+        const teamASold = (parseInt(soldCount["0"]) || 0) + (parseInt(soldCount["2"]) || 0);
+        const teamBSold = (parseInt(soldCount["1"]) || 0) + (parseInt(soldCount["3"]) || 0);
+        const surryMatches = logArray.filter(l => l.includes("SURRY"));
+        let teamASurry = 0, teamBSurry = 0;
+        for (const log of surryMatches) {
+          if (log.includes("Team A")) teamASurry++;
+          else if (log.includes("Team B")) teamBSurry++;
+        }
+        
+        return (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100]">
+            <div className="bg-surry-bg2 border border-surry-gold rounded-2xl p-8 max-w-[420px] w-[90%]">
+              <div className="font-serif text-[2rem] text-surry-gold mb-2 text-center">Game Stats</div>
+              <div className="text-center text-surry-cream-d text-[0.9rem] mb-6">
+                Total Rounds: <span className="text-surry-gold font-bold">{gs.round_number || 1}</span>
+              </div>
+              
+              {/* Team Comparison */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                {/* Team A */}
+                <div className="bg-black/40 border border-[#7ec8e3]/40 rounded-lg p-5">
+                  <div className="text-[#7ec8e3] font-medium mb-4 text-center text-sm">Team A</div>
+                  <div className="space-y-3 text-[0.85rem]">
+                    <div className="flex justify-between items-center text-surry-cream-d">
+                      <span>Times Sold</span>
+                      <span className="text-surry-red-l font-bold">{teamASold}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-surry-cream-d">
+                      <span>Surry's</span>
+                      <span className="text-[#4ade80] font-bold">{teamASurry}</span>
+                    </div>
                   </div>
                 </div>
-              ))}
+                
+                {/* Team B */}
+                <div className="bg-black/40 border border-[#f4a261]/40 rounded-lg p-5">
+                  <div className="text-[#f4a261] font-medium mb-4 text-center text-sm">Team B</div>
+                  <div className="space-y-3 text-[0.85rem]">
+                    <div className="flex justify-between items-center text-surry-cream-d">
+                      <span>Times Sold</span>
+                      <span className="text-surry-red-l font-bold">{teamBSold}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-surry-cream-d">
+                      <span>Surry's</span>
+                      <span className="text-[#4ade80] font-bold">{teamBSurry}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <button className="btn btn-gold w-full" onClick={() => setShowStats(false)}>Close</button>
             </div>
-            <button className="btn btn-gold w-full" onClick={() => setShowStats(false)}>Close</button>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

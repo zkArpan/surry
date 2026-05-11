@@ -38,9 +38,9 @@ CREATE TABLE IF NOT EXISTS public.game_state (
   bid_order JSONB,
   trump_suit TEXT,
   last_trick_winner INT,
-  pieces JSONB DEFAULT '{"02":0,"13":0}',
-  sold_count JSONB DEFAULT '{"02":0,"13":0}',
-  distributor_team TEXT DEFAULT '02',
+  pieces JSONB DEFAULT '{"0":0,"1":0,"2":0,"3":0}',
+  sold_count JSONB DEFAULT '{"0":0,"1":0,"2":0,"3":0}',
+  distributor_seat INT DEFAULT 0 CHECK (distributor_seat >= 0 AND distributor_seat <= 3),
   round_number INT DEFAULT 1,
   log JSONB DEFAULT '[]',
   updated_at TIMESTAMP DEFAULT NOW(),
@@ -151,4 +151,78 @@ BEGIN
       EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE public.game_state;';
     END IF;
   END IF;
+END $$;
+
+-- Migration: Handle schema updates for per-player piece tracking
+-- This section converts old team-based columns to new per-player format
+DO $$
+DECLARE
+  col_exists BOOLEAN;
+BEGIN
+  -- Step 1: Add distributor_seat column if it doesn't exist
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='game_state' AND column_name='distributor_seat'
+  ) INTO col_exists;
+  
+  IF NOT col_exists THEN
+    ALTER TABLE public.game_state 
+    ADD COLUMN distributor_seat INT DEFAULT 0 CHECK (distributor_seat >= 0 AND distributor_seat <= 3);
+  END IF;
+  
+  -- Step 2: Check if old distributor_team column exists
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name='game_state' AND column_name='distributor_team'
+  ) INTO col_exists;
+  
+  -- Step 3: If old column exists, migrate data
+  IF col_exists THEN
+    -- Update distributor_seat based on distributor_team value
+    -- If distributor_team was '02', set to seat 0; if '13', set to seat 1
+    UPDATE public.game_state 
+    SET distributor_seat = CASE 
+      WHEN distributor_team = '13' THEN 1 
+      ELSE 0 
+    END
+    WHERE distributor_seat = 0;
+    
+    -- Convert pieces from team format to per-player format (if not already converted)
+    -- If pieces contain "02" key (old format), convert to new format
+    UPDATE public.game_state
+    SET pieces = jsonb_build_object(
+      '0', COALESCE((pieces->>'02')::INT, 0),
+      '1', COALESCE((pieces->>'13')::INT, 0),
+      '2', COALESCE((pieces->>'02')::INT, 0),
+      '3', COALESCE((pieces->>'13')::INT, 0)
+    )
+    WHERE pieces ? '02' OR pieces ? '13';
+    
+    -- Convert sold_count from team format to per-player format (if not already converted)
+    UPDATE public.game_state
+    SET sold_count = jsonb_build_object(
+      '0', COALESCE((sold_count->>'02')::INT, 0),
+      '1', COALESCE((sold_count->>'13')::INT, 0),
+      '2', COALESCE((sold_count->>'02')::INT, 0),
+      '3', COALESCE((sold_count->>'13')::INT, 0)
+    )
+    WHERE sold_count ? '02' OR sold_count ? '13';
+    
+    -- Drop the old distributor_team column
+    ALTER TABLE public.game_state DROP COLUMN distributor_team CASCADE;
+  END IF;
+
+  -- Step 4: Ensure all game_state records have proper defaults for new format
+  UPDATE public.game_state
+  SET pieces = '{"0":0,"1":0,"2":0,"3":0}'::jsonb
+  WHERE pieces IS NULL OR (pieces ? '02' OR pieces ? '13');
+  
+  UPDATE public.game_state
+  SET sold_count = '{"0":0,"1":0,"2":0,"3":0}'::jsonb
+  WHERE sold_count IS NULL OR (sold_count ? '02' OR sold_count ? '13');
+  
+  UPDATE public.game_state
+  SET distributor_seat = COALESCE(distributor_seat, 0)
+  WHERE distributor_seat IS NULL;
+
 END $$;

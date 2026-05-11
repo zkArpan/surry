@@ -380,15 +380,6 @@ export default function GameScreen({
           }}
         >✕</button>
 
-        {/* Round number */}
-        <div style={{
-          padding: "4px 8px", borderRadius: 6,
-          background: "rgba(15,8,2,0.85)", border: "1px solid rgba(255,255,255,0.14)",
-          color: "#f0e6cc", fontSize: 10, fontFamily: "sans-serif", fontWeight: 600
-        }}>
-          Round {gs.round_number || 1}
-        </div>
-
         {/* Bid */}
         <div style={{
           padding: "4px 8px", borderRadius: 6,
